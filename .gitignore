@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
+.env
+.venv/
+app/__pycache__
+node_modules
+
+__MACOSX
+__pycache__
+angular

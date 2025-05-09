@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+import { HEALTH_METRICS_ENDPOINTS } from '../../constants/apiEndpoints';
+import { apiClient } from './apiClient';
 
 // Signal interface to match the one in metricsSlice.ts
 export interface Signal {
@@ -95,17 +94,20 @@ export interface FetchRegionParams {
 
 export const fetchMetrics = async (params: FetchMetricsParams): Promise<MaintenanceMetric[] | OperationsMetric[] | SafetyMetric[]> => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/metrics`, {
-            params: {
-                source: params.source || 'main',
-                level: params.level || 'cor',
-                interval: params.interval || 'mo',
-                measure: params.measure,
-                start: params.start,
-                end: params.end
+        const response = await apiClient.get<MaintenanceMetric[] | OperationsMetric[] | SafetyMetric[]>(
+            HEALTH_METRICS_ENDPOINTS.METRICS,
+            {
+                params: {
+                    source: params.source || 'main',
+                    level: params.level || 'cor',
+                    interval: params.interval || 'mo',
+                    measure: params.measure,
+                    start: params.start,
+                    end: params.end
+                }
             }
-        });
-        return response.data;
+        );
+        return response;
     } catch (error) {
         console.error('Error fetching metrics:', error);
         throw error;
@@ -114,15 +116,18 @@ export const fetchMetrics = async (params: FetchMetricsParams): Promise<Maintena
 
 export const fetchRegionAverage = async (params: FetchRegionParams): Promise<RegionAverage> => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/metrics/monthaverages`, {
-            params: {
-                zoneGroup: params.zoneGroup,
-                month: params.month
+        const response = await apiClient.get<number[]>(
+            HEALTH_METRICS_ENDPOINTS.MONTH_AVERAGES,
+            {
+                params: {
+                    zoneGroup: params.zoneGroup,
+                    month: params.month
+                }
             }
-        });
+        );
         
         // API returns array of [operations, maintenance, safety]
-        const [operationsValue, maintenanceValue, safetyValue] = response.data;
+        const [operationsValue, maintenanceValue, safetyValue] = response;
         
         return {
             operations: operationsValue === -1 ? 0 : operationsValue * 100,
@@ -134,7 +139,6 @@ export const fetchRegionAverage = async (params: FetchRegionParams): Promise<Reg
         throw error;
     }
 };
-
 
 export const healthMetricsApi = {
     fetchMetrics,

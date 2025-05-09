@@ -637,7 +637,7 @@ export default function Dashboard() {
     mapbox: {
       style: "carto-positron",
       center: { lat: 33.789, lon: -84.388 },
-      zoom: 11,
+      zoom: 15,
       pitch: 0,
       bearing: 0,
       dragmode: "zoom",

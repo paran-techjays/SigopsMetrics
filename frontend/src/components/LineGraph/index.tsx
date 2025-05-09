@@ -2,7 +2,7 @@ import type React from "react"
 import Plot from "react-plotly.js"
 import { Box, Typography } from "@mui/material"
 import { PlotData, Layout } from "plotly.js"
-import { AppConfig } from "../../utils/appConfig"
+import AppConfig from "../../utils/appConfig"
 
 interface LineGraphProps {
   data?: any[]

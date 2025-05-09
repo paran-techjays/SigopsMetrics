@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { FilterParams } from '../../types/api.types';
-
-const API_BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+import { SUMMARY_TREND_ENDPOINTS } from '../../constants/apiEndpoints';
+import { apiClient } from './apiClient';
 
 export interface SummaryTrendResponse {
   tp: Array<{ month: string, average: number }>;
@@ -25,9 +25,9 @@ export interface SummaryTrendResponse {
 
 export const summaryTrendApi = {
   getSummaryTrends: (filterParams: FilterParams): Promise<SummaryTrendResponse> => {
-    return axios.post<SummaryTrendResponse>(
-      `${API_BASE_URL}/metrics/summarytrends?source=main`, 
+    return apiClient.post<SummaryTrendResponse>(
+      `${SUMMARY_TREND_ENDPOINTS.SUMMARY_TRENDS}?source=main`, 
       filterParams
-    ).then(response => response.data);
+    );
   }
 }; 

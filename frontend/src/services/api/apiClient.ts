@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import AppConfig from '../../utils/appConfig';
 
-const BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+const BASE_URL = AppConfig.settings.API_PATH;
 
 class ApiClient {
     private static instance: ApiClient;

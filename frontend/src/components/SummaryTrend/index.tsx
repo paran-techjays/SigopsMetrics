@@ -8,7 +8,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useTypedSelector';
 import { fetchSummaryTrends } from '../../store/slices/summaryTrendSlice';
 import { FilterParams } from '../../types/api.types';
 import FilterChipList from '../FilterChipList';
-import { AppConfig } from '../../utils/appConfig';
+import AppConfig from '../../utils/appConfig';
 
 const SummaryTrend: React.FC = () => {
   const dispatch = useAppDispatch();

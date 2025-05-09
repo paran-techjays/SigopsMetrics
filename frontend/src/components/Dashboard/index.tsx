@@ -22,6 +22,7 @@ import CircularProgress from "@mui/material/CircularProgress"
 import MapBox, { MapTrace } from "../../components/MapBox"
 import { metricsApi } from "../../services/api/metricsApi";
 import { FilterParams, MetricsFilterRequest } from "../../types/api.types";
+import mapSettings from "../../utils/mapSettings";
 
 interface MetricRow {
   label: string
@@ -110,126 +111,15 @@ const displayMetricToMeasureMap: Record<string, string> = {
   offPeakSplitFailures: "sfo",
 };
 
-// Map settings to match Angular component configuration
-const mapSettingsConfig: Record<string, any> = {
-  dailyTrafficVolume: {
-    label: "Daily Traffic Volume",
-    field: "vpd",
-    formatType: "number",
-    formatDecimals: 0,
-    ranges: [
-      [0, 10000],
-      [10001, 20000],
-      [20001, 30000],
-      [30001, 40000],
-      [40001, 999999],
-    ],
-    legendLabels: [
-      "Unavailable",
-      "0 - 10,000",
-      "10,001 - 20,000",
-      "20,001 - 30,000",
-      "30,001 - 40,000",
-      "40,001+",
-    ],
-    legendColors: ["#808080", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8"],
-  },
-  throughput: {
-    label: "Throughput",
-    field: "tp",
-    formatType: "number",
-    formatDecimals: 0,
-    ranges: [
-      [0, 2000],
-      [2001, 4000],
-      [4001, 6000],
-      [6001, 8000],
-      [8001, 999999],
-    ],
-    legendLabels: [
-      "0 - 2,000",
-      "2,001 - 4,000",
-      "4,001 - 6,000",
-      "6,001 - 8,000",
-      "8,001+",
-    ],
-    legendColors: ["#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8"],
-  },
-  arrivalsOnGreen: {
-    label: "Arrivals on Green",
-    field: "aogd",
-    formatType: "percent",
-    formatDecimals: 1,
-    ranges: [
-      [0, 0.2],
-      [0.2, 0.4],
-      [0.4, 0.6],
-      [0.6, 0.8],
-      [0.8, 1.0],
-    ],
-    legendLabels: ["0% - 20%", "21% - 40%", "41% - 60%", "61% - 80%", "81% - 100%"],
-    legendColors: ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e"],
-  },
-  progressionRate: {
-    label: "Progression Rate",
-    field: "prd",
-    formatType: "number",
-    formatDecimals: 2,
-    ranges: [
-      [0, 0.4],
-      [0.41, 0.8],
-      [0.81, 1.0],
-      [1.01, 1.2],
-      [1.21, 99.0],
-    ],
-    legendLabels: ["0 - 0.4", "0.41 - 0.8", "0.81 - 1", "1.01 - 1.2", "1.2+"],
-    legendColors: ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e"],
-  },
-  spillbackRate: {
-    label: "Spillback Rate",
-    field: "qsd",
-    formatType: "percent",
-    formatDecimals: 1,
-    ranges: [
-      [0, 0.2],
-      [0.2001, 0.4],
-      [0.4001, 0.6],
-      [0.6001, 0.8],
-      [0.8001, 1.0],
-    ],
-    legendLabels: ["0% - 20%", "20.01% - 40%", "40.01% - 60%", "60.01% - 80%", "80.01% - 100%"],
-    legendColors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"],
-  },
-  peakPeriodSplitFailures: {
-    label: "Peak Split Failures",
-    field: "sfd",
-    formatType: "percent",
-    formatDecimals: 1,
-    ranges: [
-      [0, 0.05],
-      [0.051, 0.1],
-      [0.101, 0.15],
-      [0.151, 0.2],
-      [0.201, 1.0],
-    ],
-    legendLabels: ["0% - 5%", "5.1% - 10%", "10.1% - 15%", "15.1% - 20%", "20.1%+"],
-    legendColors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"],
-  },
-  offPeakSplitFailures: {
-    label: "Off-Peak Split Failures",
-    field: "sfo",
-    formatType: "percent",
-    formatDecimals: 1,
-    ranges: [
-      [0, 0.05],
-      [0.051, 0.1],
-      [0.101, 0.15],
-      [0.151, 0.2],
-      [0.201, 1.0],
-    ],
-    legendLabels: ["0% - 5%", "5.1% - 10%", "10.1% - 15%", "15.1% - 20%", "20.1%+"],
-    legendColors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"],
-  },
+// Map Dashboard metric IDs to mapSettings keys
+const metricToSettingsMap: Record<string, string> = {
+  dailyTrafficVolume: "dailyTrafficVolume",
+  throughput: "throughput",
+  arrivalsOnGreen: "arrivalsOnGreen",
+  progressionRate: "progressionRate",
+  spillbackRate: "spillbackRate", 
+  peakPeriodSplitFailures: "peakPeriodSplitFailures",
+  offPeakSplitFailures: "offPeakSplitFailures",
 };
 
 // Add signal interface
@@ -383,8 +273,16 @@ export default function Dashboard() {
       if (Array.isArray(responseData) && responseData.length > 0) {
         setMetricData(responseData);
         
-        // Prepare the map data
-        const mapSettings = mapSettingsConfig[metricName];
+        // Get settings from mapSettings using the mapping
+        const settingsKey = metricToSettingsMap[metricName];
+        const settings = settingsKey ? mapSettings[settingsKey] : null;
+        
+        if (!settings) {
+          console.error(`No settings found for metric: ${metricName}`);
+          setMapData(generateFallbackMapData());
+          setMapLoading(false);
+          return;
+        }
         
         // Join signal data with metric data
         const joinedData = signals
@@ -393,7 +291,7 @@ export default function Dashboard() {
             if (metricItem) {
               return {
                 ...signal,
-                [mapSettings.field]: metricItem.avg
+                [settings.field]: metricItem.avg
               };
             }
             return null;
@@ -403,18 +301,43 @@ export default function Dashboard() {
         // Create different traces for each range
         const mapTraces = [];
         
-        for (let i = 0; i < mapSettings.ranges.length; i++) {
-          const range = mapSettings.ranges[i];
+        // First add the unavailable data trace so it appears at the top of the legend
+        const unavailableSignals = joinedData.filter((signal: any) => 
+          signal[settings.field] === undefined || signal[settings.field] === null || signal[settings.field] === -1
+        );
+        
+        if (unavailableSignals.length > 0) {
+          mapTraces.push({
+            type: "scattermapbox",
+            lat: unavailableSignals.map((signal: any) => signal.latitude),
+            lon: unavailableSignals.map((signal: any) => signal.longitude),
+            mode: "markers",
+            marker: {
+              color: settings.legendColors[0], // First color is for unavailable
+              size: 10,
+              opacity: 0.8,
+              symbol: "circle"
+            },
+            text: unavailableSignals.map((signal: any) => 
+              `${signal.signalID}<br>${signal.mainStreetName} @ ${signal.sideStreetName}<br>No data available`
+            ),
+            name: settings.legendLabels[0], // "Unavailable"
+            showlegend: true,
+            hoverinfo: "text"
+          });
+        }
+        
+        // Then add traces for each range of data
+        // Skip the first range which is for unavailable data [-1, -1]
+        for (let i = 1; i < settings.ranges.length; i++) {
+          const range = settings.ranges[i];
           
           // Filter signals in this range
           const rangeSignals = joinedData.filter((signal: any) => 
-            signal[mapSettings.field] >= range[0] && signal[mapSettings.field] <= range[1]
+            signal[settings.field] >= range[0] && signal[settings.field] <= range[1]
           );
           
           if (rangeSignals.length > 0) {
-            // Add 3D bar elements for visualization - use the metric value for height
-            const useBar3D = metricName === "dailyTrafficVolume" || metricName === "throughput";
-            
             // Create a single trace for this range of signals
             mapTraces.push({
               type: "scattermapbox",
@@ -422,7 +345,7 @@ export default function Dashboard() {
               lon: rangeSignals.map((signal: any) => signal.longitude),
               mode: "markers",
               marker: {
-                color: mapSettings.legendColors[i],
+                color: settings.legendColors[i], // Use i to match the range index
                 size: 10,
                 opacity: 0.8,
                 symbol: "circle"
@@ -430,13 +353,13 @@ export default function Dashboard() {
               text: rangeSignals.map((signal: any) => 
                 generateTooltipText(
                   signal, 
-                  mapSettings.field, 
-                  mapSettings.label, 
-                  mapSettings.formatType, 
-                  mapSettings.formatDecimals
+                  settings.field, 
+                  settings.label, 
+                  settings.formatType, 
+                  settings.formatDecimals
                 )
               ),
-              name: mapSettings.legendLabels[i],
+              name: settings.legendLabels[i], // Use i to match the range index
               showlegend: true,
               hoverinfo: "text"
             });

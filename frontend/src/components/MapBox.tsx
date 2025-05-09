@@ -122,6 +122,10 @@ const MapBox: FC<MapBoxProps> = ({
     }
   });
 
+  // Separate useEffect for calculating center and zoom to avoid infinite loops
+  const [autoCenter, setAutoCenter] = useState<{lat: number, lon: number} | null>(null);
+  const [autoZoom, setAutoZoom] = useState<number | null>(null);
+
   // Add legend if needed
   useEffect(() => {
     if (showLegend) {
@@ -211,10 +215,18 @@ const MapBox: FC<MapBoxProps> = ({
 
     if (isRawTraces && data.length > 0) {
       // Just use the provided traces directly
-      setMapData((data as MapTrace[]).map(trace => ({ 
-        ...trace, 
-        type: "scattermapbox" 
-      })));
+      setMapData((prevMapData) => {
+        const newData = (data as MapTrace[]).map(trace => ({ 
+          ...trace, 
+          type: "scattermapbox" as "scattermapbox"
+        }));
+        
+        // Check if data actually changed before updating state
+        if (JSON.stringify(prevMapData) === JSON.stringify(newData)) {
+          return prevMapData;
+        }
+        return newData;
+      });
       return;
     }
 
@@ -226,17 +238,25 @@ const MapBox: FC<MapBoxProps> = ({
     );
 
     if (validSignals.length === 0) {
-      setMapData([{
-        type: "scattermapbox",
-        lat: [defaultCenter.lat],
-        lon: [defaultCenter.lon],
-        mode: "markers",
-        marker: {
-          size: 1,
-          opacity: 0
-        },
-        hoverinfo: "none"
-      }]);
+      setMapData((prevMapData) => {
+        const newData = [{
+          type: "scattermapbox" as const,
+          lat: [defaultCenter.lat],
+          lon: [defaultCenter.lon],
+          mode: "markers",
+          marker: {
+            size: 1,
+            opacity: 0
+          },
+          hoverinfo: "none"
+        }];
+        
+        // Check if data actually changed before updating state
+        if (JSON.stringify(prevMapData) === JSON.stringify(newData)) {
+          return prevMapData;
+        }
+        return newData;
+      });
       return;
     }
 
@@ -273,7 +293,7 @@ const MapBox: FC<MapBoxProps> = ({
       
       if (rangeSignals.length > 0) {
         traces.push({
-          type: "scattermapbox",
+          type: "scattermapbox" as const,
           lat: rangeSignals.map((signal: any) => signal.latitude),
           lon: rangeSignals.map((signal: any) => signal.longitude),
           text: rangeSignals.map((signal: any) => generateTooltipText(signal)),
@@ -292,7 +312,7 @@ const MapBox: FC<MapBoxProps> = ({
     // If no traces were created (no data in ranges), add default trace
     if (traces.length === 0) {
       traces.push({
-        type: "scattermapbox",
+        type: "scattermapbox" as const,
         lat: [defaultCenter.lat],
         lon: [defaultCenter.lon],
         mode: "markers",
@@ -304,12 +324,14 @@ const MapBox: FC<MapBoxProps> = ({
       });
     }
     
-    setMapData(traces);
+    setMapData((prevMapData: MapTrace[]) => {
+      // Check if data actually changed before updating state
+      if (JSON.stringify(prevMapData) === JSON.stringify(traces)) {
+        return prevMapData;
+      }
+      return traces;
+    });
   }, [signals, data, isRawTraces, loading, mapSettings]);
-
-  // Separate useEffect for calculating center and zoom to avoid infinite loops
-  const [autoCenter, setAutoCenter] = useState<{lat: number, lon: number} | null>(null);
-  const [autoZoom, setAutoZoom] = useState<number | null>(null);
 
   // Calculate auto center and zoom based on data points
   useEffect(() => {
@@ -327,8 +349,20 @@ const MapBox: FC<MapBoxProps> = ({
       const centerLon = average(allLons);
       const calculatedZoom = calculateZoom(allLats, allLons);
       
-      setAutoCenter({ lat: centerLat, lon: centerLon });
-      setAutoZoom(calculatedZoom);
+      // Only update if values actually changed
+      setAutoCenter((prev: {lat: number, lon: number} | null) => {
+        if (prev && prev.lat === centerLat && prev.lon === centerLon) {
+          return prev;
+        }
+        return { lat: centerLat, lon: centerLon };
+      });
+      
+      setAutoZoom((prev: number | null) => {
+        if (prev === calculatedZoom) {
+          return prev;
+        }
+        return calculatedZoom;
+      });
     }
   }, [mapData]);
 
@@ -342,15 +376,25 @@ const MapBox: FC<MapBoxProps> = ({
       ? autoZoom 
       : zoom;
 
-    setMapLayout((prevLayout: any) => ({
-      ...prevLayout,
-      mapbox: {
-        ...prevLayout.mapbox,
-        style: mapStyle,
-        center: newCenter,
-        zoom: newZoom
-      },
-    }));
+    setMapLayout((prevLayout: any) => {
+      // Prevent unnecessary updates by checking if values have actually changed
+      if (prevLayout.mapbox.center.lat === newCenter.lat && 
+          prevLayout.mapbox.center.lon === newCenter.lon && 
+          prevLayout.mapbox.zoom === newZoom && 
+          prevLayout.mapbox.style === mapStyle) {
+        return prevLayout;
+      }
+      
+      return {
+        ...prevLayout,
+        mapbox: {
+          ...prevLayout.mapbox,
+          style: mapStyle,
+          center: newCenter,
+          zoom: newZoom
+        },
+      };
+    });
   }, [autoCenter, autoZoom, center, zoom, mapStyle]);
 
   // Helper function to format number values

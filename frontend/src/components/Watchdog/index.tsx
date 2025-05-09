@@ -37,6 +37,7 @@ import Plotly from 'plotly.js-dist'
 import { RootState } from "../../store/store"
 import { fetchWatchdogData } from "../../store/slices/watchdogSlice"
 import { WatchdogParams } from "../../types/api.types"
+import DateRangePickerComponent from "../DateRangePicker"
 
 // Available options
 const zoneGroups = ["Central Metro", "Eastern Metro", "Western Metro", "North", "Southeast", "Southwest", "Ramp Meters"]
@@ -282,47 +283,7 @@ export default function Watchdog() {
           </Select>
         </FormControl>
 
-        {/* Date Range */}
-        {/* <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel id="date-range-label">Enter a date range</InputLabel>
-          <Select
-            labelId="date-range-label"
-            label="Enter a date range"
-            value={`${filter.startDate.toLocaleDateString()} - ${filter.endDate.toLocaleDateString()}`}
-            onChange={(e) => {
-              const [start, end] = e.target.value.split(' - ')
-              handleFilterChange('startDate', new Date(start))
-              handleFilterChange('endDate', new Date(end))
-            }}
-            endAdornment={
-              <IconButton size="small" sx={{ mr: 2 }}>
-                <CalendarTodayIcon fontSize="small" />
-              </IconButton>
-            }
-          >
-            <MenuItem value={`${new Date(new Date().setDate(new Date().getDate() - 7)).toLocaleDateString()} - ${new Date().toLocaleDateString()}`}>Last 7 days</MenuItem>
-            <MenuItem value={`${new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString()} - ${new Date().toLocaleDateString()}`}>Prior Month</MenuItem>
-            <MenuItem value={`${new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toLocaleDateString()} - ${new Date().toLocaleDateString()}`}>Prior Year</MenuItem>
-          </Select>
-        </FormControl> */}
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DateRangePicker
-            startText="Start"
-            endText="End"
-            value={[filter.startDate, filter.endDate]}
-            onChange={(newValue) => {
-              handleFilterChange('startDate', newValue[0])
-              handleFilterChange('endDate', newValue[1])
-            }}
-            renderInput={(startProps, endProps) => (
-              <>
-                <TextField size="small" {...startProps} sx={{ minWidth: 110, mr: 1 }} />
-                <Box sx={{ mx: 1 }}> to </Box>
-                <TextField size="small" {...endProps} sx={{ minWidth: 110 }} />
-              </>
-            )}
-          />
-        </LocalizationProvider>
+        <DateRangePickerComponent />
 
         {/* Alert */}
         <FormControl size="small" sx={{ minWidth: 150 }}>

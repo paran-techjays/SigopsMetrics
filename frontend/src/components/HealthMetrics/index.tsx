@@ -625,7 +625,7 @@ const MetricsTable = ({ type }: MetricsTableProps) => {
 
     return (
         <Box>
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" component="h2">
                     {type} Metrics
                 </Typography>
@@ -668,7 +668,7 @@ const MetricsTable = ({ type }: MetricsTableProps) => {
                         }}
                     />
                 </LocalizationProvider>
-            </Box>
+            </Box> */}
             
             <TableContainer component={Paper}>
                 <Table size="small">
@@ -1015,8 +1015,9 @@ const TrendGraphs: React.FC<TrendGraphsProps> = ({ type }) => {
     return (
         <Box sx={{ width: '100%' }}>
             <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    {getTimeSeriesTitle()}
+                <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
+                    {/* {getTimeSeriesTitle()} */}
+                    Percent Health
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
                     {/* Location Bar Chart */}

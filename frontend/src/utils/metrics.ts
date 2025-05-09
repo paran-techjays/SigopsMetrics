@@ -10,6 +10,10 @@ export interface MetricsOptions {
   isMapMetrics?: boolean;
   start?: string;
   end?: string;
+  dashboard?: boolean;
+  signalId?: string;
+  goal?: number;
+  dt?: Date;
 }
 
 export class Metrics {
@@ -22,10 +26,15 @@ export class Metrics {
   interval: string;
   level: string;
   isMapMetrics: boolean;
-  start?: string;
-  end?: string;
+  start: string;
+  end: string;
+  dashboard: boolean = false;
+  signalId: string = "";
+  goal?: number;
+  dt: Date = new Date();
 
   constructor(options: MetricsOptions) {
+    this.dt = options.dt || new Date();
     this.measure = options.measure;
     this.field = options.field || '';
     this.label = options.label;
@@ -35,8 +44,16 @@ export class Metrics {
     this.interval = options.interval || 'mo';
     this.level = options.level || 'sig';
     this.isMapMetrics = options.isMapMetrics || false;
-    this.start = options.start;
-    this.end = options.end;
+    
+    // Set default start/end dates like in Angular version
+    const currentMonth = this.dt.getMonth() + 1;
+    const currentYear = this.dt.getFullYear();
+    this.start = options.start || `${currentMonth}/${currentYear - 1}`;
+    this.end = options.end || `${currentMonth}/${currentYear}`;
+    
+    this.dashboard = options.dashboard || false;
+    this.signalId = options.signalId || '';
+    this.goal = options.goal;
   }
 }
 

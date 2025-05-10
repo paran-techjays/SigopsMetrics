@@ -3,10 +3,12 @@ import Plot from "react-plotly.js"
 import { Box, Typography } from "@mui/material"
 import { PlotData, Layout } from "plotly.js"
 import AppConfig from "../../utils/appConfig"
+import { Graph } from "../../utils/graph"
 
 interface LineGraphProps {
   data?: any[]
   title?: string
+  graph?: Graph
   lineColor?: string
   goalValue?: number
   fillColor?: string
@@ -17,12 +19,16 @@ interface LineGraphProps {
 const LineGraph: React.FC<LineGraphProps> = ({ 
   data,
   title = "Throughput",
+  graph,
   lineColor = "#66cc66",
   goalValue,
   fillColor,
   isFilled = false,
   metrics
 }) => {
+  // Use graph properties if provided
+  const graphLineColor = graph?.lineColor || lineColor;
+  
   // Use provided data or fallback to default sample data
   const useProvidedData = data && data.length > 0
 
@@ -118,14 +124,26 @@ const LineGraph: React.FC<LineGraphProps> = ({
   // Determine whether to include fill based on title/metric type
   const shouldFill = hasGoal || isFilled
   
-  // Format goal value for display (percentages vs regular numbers)
-  const formatGoalValue = (val: number) => {
-    if (title.includes("Uptime")) {
-      // For uptime metrics, convert from decimal to percentage
-      return (val * 100).toFixed(1) + "%"
+  // Format value based on metrics formatting or default to standard formatting
+  const formatValue = (val: number) => {
+    if (!val && val !== 0) return "";
+    
+    if (metrics) {
+      // Use metrics formatting if available
+      if (metrics.formatType === "percent") {
+        // Format as percentage with specified decimals
+        const decimals = metrics.formatDecimals || 1;
+        return (val * 100).toFixed(decimals) + "%";
+      } else {
+        // Format as number with specified decimals
+        const decimals = metrics.formatDecimals || 0;
+        return val.toFixed(decimals);
+      }
+    } else {
+      // Default formatting
+      return val.toLocaleString();
     }
-    return val.toLocaleString()
-  }
+  };
   
   // Determine fill color and direction based on the metric type
   let determinedFillColor = fillColor
@@ -160,7 +178,7 @@ const LineGraph: React.FC<LineGraphProps> = ({
         dash: "dash",
       },
       hoverinfo: "text",
-      hovertext: Array(months.length).fill(`Goal: ${formatGoalValue(actualGoalValue)}`),
+      hovertext: Array(months.length).fill(`Goal: ${formatValue(actualGoalValue)}`),
       hoverlabel: {
         bgcolor: "#999",
         font: { color: "#fff" },
@@ -179,15 +197,30 @@ const LineGraph: React.FC<LineGraphProps> = ({
       type: "scatter",
       mode: "lines",
       line: {
-        color: lineColor,
+        color: graphLineColor,
         width: 2,
       },
       fill: 'tonexty',
       fillcolor: determinedFillColor,
       hoverinfo: "text",
-      hovertext: values.map((val, i) => `${fullDates[i]}, ${val.toLocaleString()}`),
+      hovertext: values.map((val, i) => {
+        // Use custom hover template from graph if provided
+        if (graph?.hoverTemplate) {
+          // Replace placeholders in hover template
+          return graph.hoverTemplate
+            .replace("%{x}", fullDates[i])
+            .replace("%{y:.0f}", formatValue(val))
+            .replace("%{y:.1f}", formatValue(val))
+            .replace("%{y:.2f}", formatValue(val))
+            .replace("%{y:.1%}", (val * 100).toFixed(1) + "%")
+            .replace("%{y:.2%}", (val * 100).toFixed(2) + "%")
+            .replace("%{y}", formatValue(val));
+        }
+        // Default hover text
+        return `${fullDates[i]}, ${formatValue(val)}`;
+      }),
       hoverlabel: {
-        bgcolor: lineColor,
+        bgcolor: graphLineColor,
         font: { color: "#fff" },
         bordercolor: "#333",
       },
@@ -200,15 +233,30 @@ const LineGraph: React.FC<LineGraphProps> = ({
       type: "scatter",
       mode: "lines",
       line: {
-        color: lineColor,
+        color: graphLineColor,
         width: 2,
       },
       fill: 'tonexty',
       fillcolor: determinedFillColor,
       hoverinfo: "text",
-      hovertext: values.map((val, i) => `${fullDates[i]}, ${val.toLocaleString()}`),
+      hovertext: values.map((val, i) => {
+        // Use custom hover template from graph if provided
+        if (graph?.hoverTemplate) {
+          // Replace placeholders in hover template
+          return graph.hoverTemplate
+            .replace("%{x}", fullDates[i])
+            .replace("%{y:.0f}", formatValue(val))
+            .replace("%{y:.1f}", formatValue(val))
+            .replace("%{y:.2f}", formatValue(val))
+            .replace("%{y:.1%}", (val * 100).toFixed(1) + "%")
+            .replace("%{y:.2%}", (val * 100).toFixed(2) + "%")
+            .replace("%{y}", formatValue(val));
+        }
+        // Default hover text
+        return `${fullDates[i]}, ${formatValue(val)}`;
+      }),
       hoverlabel: {
-        bgcolor: lineColor,
+        bgcolor: graphLineColor,
         font: { color: "#fff" },
         bordercolor: "#333",
       },
@@ -221,13 +269,28 @@ const LineGraph: React.FC<LineGraphProps> = ({
       type: "scatter",
       mode: "lines",
       line: {
-        color: lineColor,
+        color: graphLineColor,
         width: 2,
       },
       hoverinfo: "text",
-      hovertext: values.map((val, i) => `${fullDates[i]}, ${val.toLocaleString()}`),
+      hovertext: values.map((val, i) => {
+        // Use custom hover template from graph if provided
+        if (graph?.hoverTemplate) {
+          // Replace placeholders in hover template
+          return graph.hoverTemplate
+            .replace("%{x}", fullDates[i])
+            .replace("%{y:.0f}", formatValue(val))
+            .replace("%{y:.1f}", formatValue(val))
+            .replace("%{y:.2f}", formatValue(val))
+            .replace("%{y:.1%}", (val * 100).toFixed(1) + "%")
+            .replace("%{y:.2%}", (val * 100).toFixed(2) + "%")
+            .replace("%{y}", formatValue(val));
+        }
+        // Default hover text
+        return `${fullDates[i]}, ${formatValue(val)}`;
+      }),
       hoverlabel: {
-        bgcolor: lineColor,
+        bgcolor: graphLineColor,
         font: { color: "#fff" },
         bordercolor: "#333",
       },
@@ -264,12 +327,12 @@ const LineGraph: React.FC<LineGraphProps> = ({
 
   // Layout configuration
   const layout: Partial<Layout> = {
-    height: 120,
+    height: 100,
     margin: {
       l: 0,
       r: 0,
       t: 10,
-      b: 30,
+      b: 20,
       pad: 0,
     },
     xaxis: {
@@ -297,7 +360,7 @@ const LineGraph: React.FC<LineGraphProps> = ({
       {
         x: months[0],
         y: values[0],
-        text: Number(values[0]).toFixed(3),
+        text: formatValue(values[0]),
         showarrow: false,
         font: { size: 10 },
         xanchor: "left",
@@ -306,7 +369,7 @@ const LineGraph: React.FC<LineGraphProps> = ({
       {
         x: months[months.length - 1],
         y: values[values.length - 1],
-        text: Number(values[values.length - 1]).toFixed(3),
+        text: formatValue(values[values.length - 1]),
         showarrow: false,
         font: { size: 10 },
         xanchor: "right",
@@ -322,15 +385,15 @@ const LineGraph: React.FC<LineGraphProps> = ({
   }
 
   return (
-    <Box sx={{ position: "relative", width: "100%", maxWidth: "600px" }}>
+    <Box sx={{ position: "relative", width: "100%", maxWidth: "600px", mb: 1 }}>
       <Box sx={{ display: "flex", alignItems: "flex-start" }}>
         <Typography 
           variant="subtitle1" 
           color="#000000DE" 
           sx={{ 
             mr: 2,
-            mt: 4, // Align vertically with the middle of the chart
-            width: "90px", // Fixed width for the title
+            mt: 3,
+            width: "90px",
           }}
         >
           {title}

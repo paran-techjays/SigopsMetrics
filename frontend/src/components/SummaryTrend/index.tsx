@@ -311,65 +311,65 @@ const SummaryTrend: React.FC = () => {
       <FilterChipList onFilterChange={handleFilterChange} activeFilters={filterState} />
       
       {data && (
-        <Container maxWidth={false} sx={{ pt: 2 }}>
+        <Container maxWidth={false}>
           <Grid container spacing={3}>
             <Grid size={{xs: 12, md: 6}}>
               <Paper sx={{ p: 3, boxShadow: 1 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'medium' }}>Performance</Typography>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'medium' }}>Performance</Typography>
                 
                 <LineGraph 
                   data={data.tp} 
                   title={tpTitle}
-                  line={tpGraph}
+                  graph={tpGraph}
                   metrics={tpGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data[aogString]} 
                   title={aogTitle}
-                  line={aogGraph}
+                  graph={aogGraph}
                   metrics={aogGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data[prString]} 
                   title={prdTitle}
-                  line={prdGraph}
+                  graph={prdGraph}
                   metrics={prdGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data[qsString]} 
                   title={qsdTitle}
-                  line={qsdGraph}
+                  graph={qsdGraph}
                   metrics={qsdGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data[sfString]} 
                   title={sfdTitle}
-                  line={sfGraph}
+                  graph={sfGraph}
                   metrics={sfdGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.sfo} 
                   title={sfoTitle}
-                  line={sfGraph}
+                  graph={sfGraph}
                   metrics={sfoGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.tti} 
                   title={ttiTitle}
-                  line={ttiGraph}
+                  graph={ttiGraph}
                   metrics={ttiGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.pti} 
                   title={ptiTitle}
-                  line={ptiGraph}
+                  graph={ptiGraph}
                   metrics={ptiGraphMetrics}
                 />
               </Paper>
@@ -382,56 +382,56 @@ const SummaryTrend: React.FC = () => {
                 <LineGraph 
                   data={data[vpString]} 
                   title={dtvTitle}
-                  line={dtvGraph}
+                  graph={dtvGraph}
                   metrics={dtvGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.vphpa} 
                   title={amvTitle}
-                  line={amvGraph}
+                  graph={amvGraph}
                   metrics={amvGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.vphpp} 
                   title={pmvTitle}
-                  line={pmvGraph}
+                  graph={pmvGraph}
                   metrics={pmvGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data[papString]} 
                   title={paTitle}
-                  line={paGraph}
+                  graph={paGraph}
                   metrics={paGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.du} 
                   title={duTitle}
-                  line={duGraph}
+                  graph={duGraph}
                   metrics={duGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.pau} 
                   title={pauTitle}
-                  line={pauGraph}
+                  graph={pauGraph}
                   metrics={pauGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.cctv} 
                   title={cctvTitle}
-                  line={cctvGraph}
+                  graph={cctvGraph}
                   metrics={cctvGraphMetrics}
                 />
                 
                 <LineGraph 
                   data={data.cu} 
                   title={cuTitle}
-                  line={cuGraph}
+                  graph={cuGraph}
                   metrics={cuGraphMetrics}
                 />
               </Paper>

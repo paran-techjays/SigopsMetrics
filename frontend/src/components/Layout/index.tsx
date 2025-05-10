@@ -5,9 +5,11 @@ import type React from "react"
 import { useState } from "react"
 import { styled } from "@mui/material/styles"
 import Box from "@mui/material/Box"
-import Header from "../Header"
+import Header from "../Header";
 import SideNav from "../SideNav"
 import FilterSidebar from "../FilterSidebar"
+import IconButton from "@mui/material/IconButton"
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
 const expandedDrawerWidth = 240
 const collapsedDrawerWidth = 65
@@ -60,7 +62,37 @@ export default function Layout({ children }: LayoutProps) {
       <Header sideNavOpen={sideNavExpanded} onSideNavToggle={handleSideNavToggle} onFilterToggle={handleFilterToggle} />
       <SideNav open={true} expanded={sideNavExpanded} width={sideNavWidth} />
       <Main sideNavWidth={sideNavWidth} filterOpen={filterOpen}>
-        <Box sx={{ pt: 8, height: "calc(100vh - 64px)", overflow: "auto" }}>{children}</Box>
+        <Box sx={{ pt: 8, height: "calc(100vh - 64px)", overflow: "auto" }}>
+          {/* Filter Button - Absolutely positioned in top right corner */}
+          <Box sx={{ 
+            position: 'absolute', 
+            top: '70px', 
+            right: filterOpen ? `${filterWidth + 16}px` : '16px', 
+            zIndex: 1100,
+            transition: (theme) => theme.transitions.create(['right'], {
+              easing: theme.transitions.easing.easeOut,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+          }}>
+            <IconButton 
+              color="primary" 
+              onClick={handleFilterToggle}
+              sx={{ 
+                bgcolor: 'white', 
+                boxShadow: 2,
+                '&:hover': {
+                  bgcolor: 'white',
+                  opacity: 0.9,
+                } 
+              }}
+              size="large"
+              aria-label="open filters"
+            >
+              <FilterAltIcon />
+            </IconButton>
+          </Box>
+          {children}
+        </Box>
       </Main>
       <FilterSidebar open={filterOpen} width={filterWidth} onClose={handleFilterToggle} />
     </Box>

@@ -274,7 +274,7 @@ export default function Operations() {
     mapbox: {
       style: "carto-positron",
       center: { lat: 33.789, lon: -84.388 },
-      zoom: 11,
+      zoom: 15,
     },
     margin: { r: 0, t: 0, b: 0, l: 0 },
   }

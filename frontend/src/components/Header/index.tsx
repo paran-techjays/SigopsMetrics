@@ -9,7 +9,6 @@ import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import IconButton from "@mui/material/IconButton"
 import MenuIcon from "@mui/icons-material/Menu"
-import FilterListIcon from "@mui/icons-material/FilterList"
 import HelpIcon from "@mui/icons-material/Help"
 import ChatIcon from '@mui/icons-material/Chat'
 import AppsIcon from "@mui/icons-material/Apps"
@@ -156,9 +155,6 @@ export default function Header({ sideNavOpen, onSideNavToggle, onFilterToggle }:
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
           <img src={sigOpsLogo} alt="SigOps Metrics Logo" height="50px" />
         </Box>
-        <IconButton color="inherit" onClick={onFilterToggle}>
-          <FilterListIcon />
-        </IconButton>
         {appConfig.hasBtnContactUs && (
           <IconButton color="inherit" onClick={handleContactOpen}>
             <ChatIcon />

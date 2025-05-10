@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchAllSignals } from "../../store/slices/metricsSlice";
-import { AppDispatch } from "../../store/store";
+import { AppDispatch, RootState } from "../../store/store";
 import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Paper from "@mui/material/Paper"
@@ -148,8 +148,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [mapData, setMapData] = useState<any>(null);
   const [mapLoading, setMapLoading] = useState<boolean>(true);
-  const [signals, setSignals] = useState<Signal[]>([]);
+  const signals = useSelector((state: RootState) => state.metrics.signals);
   const [metricData, setMetricData] = useState<MetricDataItem[]>([]);
+  console.log("use selector signals:", signals);
   
   const dispatch = useDispatch<AppDispatch>();
 
@@ -172,6 +173,10 @@ export default function Dashboard() {
     priority: "",
     classification: "",
   };
+
+  useEffect(() => {
+    dispatch(fetchAllSignals());
+  }, []);
 
   // Calculate average of a field in an array of objects
   const calculateAverage = useCallback((data: any[], field: string): number => {
@@ -228,36 +233,10 @@ export default function Dashboard() {
     return `${signalInfo}<br>${label}: ${value}`;
   }, [formatValue]);
 
-  // Fetch signal data
-  const fetchSignals = useCallback(async () => {
-    try {
-      // Fetch signal data with location info
-      const response = await fetch('https://sigopsmetrics-api.dot.ga.gov/signals/all');
-      if (!response.ok) throw new Error('Failed to fetch signals');
-      
-      const data = await response.json();
-      
-      // Filter out signals with missing coordinates
-      const validSignals = data.filter((signal: any) => 
-        signal.latitude !== 0 && signal.longitude !== 0 && 
-        signal.latitude !== null && signal.longitude !== null);
-      
-      setSignals(validSignals);
-    } catch (error) {
-      console.error('Error fetching signal data:', error);
-      setSignals([]);
-    }
-  }, []);
-
   // Fetch map data for the selected metric
   const fetchMapData = useCallback(async (metricName: string) => {
     setMapLoading(true);
-    try {
-      // Fetch signals if not already loaded
-      if (signals.length === 0) {
-        await fetchSignals();
-      }
-      
+    try {      
       const measure = displayMetricToMeasureMap[metricName];
       const params: MetricsFilterRequest = {
         source: "main",
@@ -279,10 +258,12 @@ export default function Dashboard() {
         
         if (!settings) {
           console.error(`No settings found for metric: ${metricName}`);
-          setMapData(generateFallbackMapData());
+          // setMapData(generateFallbackMapData());
           setMapLoading(false);
           return;
         }
+
+        console.log("Signals:", signals);
         
         // Join signal data with metric data
         const joinedData = signals
@@ -336,6 +317,7 @@ export default function Dashboard() {
           const rangeSignals = joinedData.filter((signal: any) => 
             signal[settings.field] >= range[0] && signal[settings.field] <= range[1]
           );
+          console.log("Range signals:", joinedData);
           
           if (rangeSignals.length > 0) {
             // Create a single trace for this range of signals
@@ -439,15 +421,15 @@ export default function Dashboard() {
         setMapLayout(mapLayout);
       } else {
         console.error("Invalid map data response:", responseData);
-        setMapData(generateFallbackMapData());
+        // setMapData(generateFallbackMapData());
       }
     } catch (error) {
       console.error("Error fetching map data:", error);
-      setMapData(generateFallbackMapData());
+      // setMapData(generateFallbackMapData());
     } finally {
       setMapLoading(false);
     }
-  }, [signals, calculateAverage, calculateZoom, generateTooltipText, commonFilterParams, fetchSignals, displayMetricToMeasureMap]);
+  }, [signals, calculateAverage, calculateZoom, generateTooltipText, commonFilterParams, displayMetricToMeasureMap]);
 
   // Generate fallback map data if API fails
   const generateFallbackMapData = () => {
@@ -479,16 +461,11 @@ export default function Dashboard() {
   };
 
   // Fetch data when component mounts
-  useEffect(() => {
-    dispatch(fetchAllSignals());
-    
+  useEffect(() => {    
     const fetchData = async () => {
       setLoading(true);
       
-      try {
-        // First fetch signal data needed for map
-        await fetchSignals();
-        
+      try {        
         // Fetch performance metrics
         const perfMetricsData = await Promise.all(
           performanceMetricCodes.map(async (measure) => {
@@ -594,8 +571,7 @@ export default function Dashboard() {
         setPerfMetrics(perfMetricsData);
         setVolMetrics(volMetricsData);
         
-        // Also fetch initial map data
-        await fetchMapData(displayMetric);
+        // Don't try to fetch map data here - we'll do it in another effect when signals are available
       } catch (error) {
         console.error("Error fetching metrics data:", error);
         // Fall back to dummy data if API calls fail
@@ -622,14 +598,25 @@ export default function Dashboard() {
         ]);
         
         // Set fallback map data
-        setMapData(generateFallbackMapData());
+        // setMapData(generateFallbackMapData());
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [dispatch, fetchSignals]);
+  }, [dispatch, displayMetric]);
+
+  // Add a separate effect to fetch map data when signals become available
+  useEffect(() => {
+    // Only fetch map data if signals data is available
+    if (signals && signals.length > 0) {
+      console.log("Signals data available, fetching map data...", signals.length);
+      fetchMapData(displayMetric);
+    } else {
+      console.log("Waiting for signals data before fetching map data...");
+    }
+  }, [signals, displayMetric]);
 
   const [mapLayout, setMapLayout] = useState<any>({
     autosize: true,
@@ -693,21 +680,6 @@ export default function Dashboard() {
       }
     ]
   });
-
-  // // Fetch initial data
-  // useEffect(() => {
-  //   // Fetch signals data
-  //   fetchSignals();
-    
-  //   dispatch(fetchAllSignals());
-    
-  //   // ... existing effect code ...
-    
-  //   // Also fetch initial map data
-  //   fetchMapData(displayMetric);
-    
-  //   // ... rest of the existing effect code ...
-  // }, [dispatch, fetchSignals]);
 
   // Return JSX
   return (

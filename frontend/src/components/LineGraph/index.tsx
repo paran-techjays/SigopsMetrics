@@ -322,7 +322,7 @@ const LineGraph: React.FC<LineGraphProps> = ({
   }
 
   return (
-    <Box sx={{ mb: 2, position: "relative", width: "100%", maxWidth: "600px" }}>
+    <Box sx={{ position: "relative", width: "100%", maxWidth: "600px" }}>
       <Box sx={{ display: "flex", alignItems: "flex-start" }}>
         <Typography 
           variant="subtitle1" 

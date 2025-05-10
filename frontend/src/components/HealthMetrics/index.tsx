@@ -70,6 +70,14 @@ const StatusCircle = styled(Box)(({ theme, color }) => ({
         justifyContent: 'center',
         width: 80,
         height: 80,
+        [theme.breakpoints.up('md')]: {
+            width: 100,
+            height: 100,
+        },
+        [theme.breakpoints.up('lg')]: {
+            width: 120,
+            height: 120,
+        },
         '& .MuiCircularProgress-root': {
             position: 'absolute',
             '&.outer': {
@@ -92,7 +100,13 @@ const StatusCircle = styled(Box)(({ theme, color }) => ({
             position: 'absolute',
             color: color,
             fontSize: '24px',
-            zIndex: 1
+            zIndex: 1,
+            [theme.breakpoints.up('md')]: {
+                fontSize: '30px',
+            },
+            [theme.breakpoints.up('lg')]: {
+                fontSize: '36px',
+            }
         }
     }
 }));
@@ -179,11 +193,11 @@ const RegionStatus = () => {
         const [operationsValue, setOperationsValue] = useState(0);
         const [maintenanceValue, setMaintenanceValue] = useState(0);
         const [safetyValue, setSafetyValue] = useState(0);
+        const [circleSize, setCircleSize] = useState({ outer: 80, inner: 60 });
 
-        // Animation effect that runs on component mount
         useEffect(() => {
-            const duration = 100; // Animation duration in ms
-            const interval = 10; // Update interval in ms
+            const duration = 100;
+            const interval = 10;
             const steps = duration / interval;
             
             let step = 0;
@@ -192,7 +206,6 @@ const RegionStatus = () => {
                 step++;
                 const progress = step / steps;
                 
-                // Easing function for smoother animation
                 const easeOutQuad = (t: number) => t * (2 - t);
                 const easedProgress = easeOutQuad(progress);
                 
@@ -208,10 +221,28 @@ const RegionStatus = () => {
             return () => clearInterval(timer);
         }, [region]);
 
+        useEffect(() => {
+            const handleResize = () => {
+                if (window.matchMedia('(min-width: 1200px)').matches) {
+                    setCircleSize({ outer: 120, inner: 90 });
+                } else if (window.matchMedia('(min-width: 900px)').matches) {
+                    setCircleSize({ outer: 100, inner: 75 });
+                } else {
+                    setCircleSize({ outer: 80, inner: 60 });
+                }
+            };
+
+            handleResize();
+            
+            window.addEventListener('resize', handleResize);
+            
+            return () => window.removeEventListener('resize', handleResize);
+        }, []);
+
         return (
         <Box>
             <RegionHeader color={region?.color}>
-                <Typography sx={{ fontSize: '0.8rem' }}>{region?.name}</Typography>
+                <Typography sx={{ fontSize: { xs: '0.8rem', md: '1rem', lg: '1.1rem' } }}>{region?.name}</Typography>
             </RegionHeader>
             <Box display="flex" justifyContent="space-around" mb={2}>
                 <StatusCircle color={getStatusColor(region?.operations)}>
@@ -220,14 +251,14 @@ const RegionStatus = () => {
                             className="outer"
                             variant="determinate" 
                             value={operationsValue} 
-                            size={80}
+                            size={circleSize.outer}
                             thickness={4}
                         />
                         <CircularProgress 
                             className="inner"
                             variant="determinate" 
                             value={100} 
-                            size={60}
+                            size={circleSize.inner}
                             thickness={3}
                         />
                         <TrafficIcon className="icon" />
@@ -260,7 +291,7 @@ const RegionStatus = () => {
                             </Typography>
                         </Box>
                     </div>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'blue' }}>Operation</Typography>
+                    <Typography sx={{ fontSize: { xs: '0.8rem', md: '0.9rem', lg: '1rem' }, color: 'blue' }}>Operation</Typography>
                 </StatusCircle>
                 <StatusCircle color={getStatusColor(region?.maintenance)}>
                     <div className="progress-wrapper">
@@ -268,14 +299,14 @@ const RegionStatus = () => {
                             className="outer"
                             variant="determinate" 
                             value={maintenanceValue} 
-                            size={80}
+                            size={circleSize.outer}
                             thickness={4}
                         />
                         <CircularProgress 
                             className="inner"
                             variant="determinate" 
                             value={100} 
-                            size={60}
+                            size={circleSize.inner}
                             thickness={3}
                         />
                         <BuildIcon className="icon" />
@@ -308,7 +339,7 @@ const RegionStatus = () => {
                             </Typography>
                         </Box>
                     </div>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'blue' }}>Maintenance</Typography>
+                    <Typography sx={{ fontSize: { xs: '0.8rem', md: '0.9rem', lg: '1rem' }, color: 'blue' }}>Maintenance</Typography>
                 </StatusCircle>
                 <StatusCircle color={getStatusColor(region?.safety)}>
                     <div className="progress-wrapper">
@@ -316,14 +347,14 @@ const RegionStatus = () => {
                             className="outer"
                             variant="determinate" 
                             value={safetyValue} 
-                            size={80}
+                            size={circleSize.outer}
                             thickness={4}
                         />
                         <CircularProgress 
                             className="inner"
                             variant="determinate" 
                             value={100} 
-                            size={60}
+                            size={circleSize.inner}
                             thickness={3}
                         />
                         <EngineeringIcon className="icon" />
@@ -356,7 +387,7 @@ const RegionStatus = () => {
                             </Typography>
                         </Box>
                     </div>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'blue' }}>Safety</Typography>
+                    <Typography sx={{ fontSize: { xs: '0.8rem', md: '0.9rem', lg: '1rem' }, color: 'blue' }}>Safety</Typography>
                 </StatusCircle>
             </Box>
         </Box>
@@ -368,14 +399,16 @@ const RegionStatus = () => {
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gridTemplateRows: 'repeat(3, auto)',
-            gap: 3,
+            gap: { xs: 2, sm: 3, md: 4, lg: 5 },
+            width: '100%',
+            maxWidth: '100%',
             '& .map-container': {
                 gridColumn: '2',
                 gridRow: '2 / span 2',
                 bgcolor: 'background.paper',
                 borderRadius: 1,
                 p: 2,
-                minHeight: 400,
+                minHeight: { xs: 300, sm: 350, md: 400, lg: 450 },
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -390,14 +423,13 @@ const RegionStatus = () => {
             {/* Column 2 */}
             <RegionCard region={regionsData[1]} /> {/* 2,1 SOUTHWEST */}
             <Box className="map-container">
-                {/* <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>Georgia Regions</Typography> */}
                 <Box 
                     component="img" 
                     src={georgiaMap} 
                     alt="Georgia Region Map"
                     sx={{
                         maxWidth: '100%',
-                        maxHeight: '350px',
+                        maxHeight: { xs: '250px', sm: '300px', md: '350px', lg: '400px' },
                         objectFit: 'contain'
                     }}
                 />
@@ -1079,7 +1111,7 @@ const HealthMetrics = () => {
     };
 
     return (
-        <Box sx={{ width: '100%' }}>
+        <Box sx={{ width: '100%', maxWidth: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs 
                     value={tabValue} 

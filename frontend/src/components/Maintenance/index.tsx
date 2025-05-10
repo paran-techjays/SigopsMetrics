@@ -385,7 +385,7 @@ export default function Maintenance() {
     mapbox: {
       style: "carto-positron",
       center: { lat: 33.789, lon: -84.388 },
-      zoom: 15,
+      zoom: 8,
     },
     margin: { r: 0, t: 0, b: 0, l: 0 },
   }
@@ -631,7 +631,7 @@ export default function Maintenance() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={12}
+                        zoom={8}
                         renderLegend={getMapLegend}
                       />
                     </>

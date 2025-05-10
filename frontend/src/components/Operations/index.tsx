@@ -274,7 +274,7 @@ export default function Operations() {
     mapbox: {
       style: "carto-positron",
       center: { lat: 33.789, lon: -84.388 },
-      zoom: 15,
+      zoom: 8,
     },
     margin: { r: 0, t: 0, b: 0, l: 0 },
   }
@@ -393,7 +393,7 @@ export default function Operations() {
           {/* Main Content */}
           <Grid container spacing={2}>
             {/* Metric Display */}
-            <Grid size={{xs: 12, md: 4}}>
+            <Grid item xs={12} md={4}>
               <Box sx={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -463,7 +463,7 @@ export default function Operations() {
             </Grid>
 
             {/* Map */}
-            <Grid size={{xs: 12, md: 8}}>
+            <Grid item xs={12} md={8}>
               <Paper sx={{ 
                 p: 2, 
                 height: "100%", 
@@ -488,7 +488,7 @@ export default function Operations() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={11}
+                        zoom={8}
                         renderLegend={getMapLegend}
                       />
                     </>

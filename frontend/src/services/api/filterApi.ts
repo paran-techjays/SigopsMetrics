@@ -1,7 +1,5 @@
 import { apiClient } from './apiClient';
-
-// Set base URL from environment variable or use a default
-const BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+import { FILTER_ENDPOINTS } from '../../constants/apiEndpoints';
 
 /**
  * Filter API service for fetching filter options data
@@ -11,7 +9,7 @@ const filterApi = {
    * Get all available zone groups (regions)
    */
   getZoneGroups: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/zonegroups`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.ZONE_GROUPS);
   },
 
   /**
@@ -19,7 +17,7 @@ const filterApi = {
    */
   getZones: async () => {
     try {
-      const result = await apiClient.get<string[]>(`${BASE_URL}/signals/zones`);
+      const result = await apiClient.get<string[]>(FILTER_ENDPOINTS.ZONES);
       console.log('Zones API response:', result);
       return result;
     } catch (error) {
@@ -32,35 +30,35 @@ const filterApi = {
    * Get zones filtered by zone group
    */
   getZonesByZoneGroup: async (zoneGroup: string) => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/zonesbyzonegroup/${zoneGroup}`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.ZONES_BY_ZONE_GROUP(zoneGroup));
   },
 
   /**
    * Get all available agencies
    */
   getAgencies: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/agencies`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.AGENCIES);
   },
 
   /**
    * Get all available counties
    */
   getCounties: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/counties`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.COUNTIES);
   },
 
   /**
    * Get all available cities
    */
   getCities: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/cities`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.CITIES);
   },
 
   /**
    * Get all available corridors
    */
   getCorridors: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/corridors`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.CORRIDORS);
   },
 
   /**
@@ -76,7 +74,7 @@ const filterApi = {
     }
   ) => {
     const { zoneGroup, zone, agency, county, city } = filter;
-    const url = `${BASE_URL}/signals/corridorsbyfilter?zoneGroup=${zoneGroup || ''}&zone=${zone || ''}&agency=${agency || ''}&county=${county || ''}&city=${city || ''}`;
+    const url = `${FILTER_ENDPOINTS.CORRIDORS_BY_FILTER}?zoneGroup=${zoneGroup || ''}&zone=${zone || ''}&agency=${agency || ''}&county=${county || ''}&city=${city || ''}`;
     return await apiClient.get<string[]>(url);
   },
 
@@ -84,29 +82,28 @@ const filterApi = {
    * Get all available subcorridors
    */
   getSubcorridors: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/subcorridors`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.SUBCORRIDORS);
   },
 
   /**
    * Get subcorridors filtered by corridor
    */
   getSubcorridorsByCorridor: async (corridor: string) => {
-    const url = `${BASE_URL}/signals/subcorridorsbycorridor/${encodeURIComponent(corridor)}`;
-    return await apiClient.get<string[]>(url);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.SUBCORRIDORS_BY_CORRIDOR(corridor));
   },
 
   /**
    * Get all available priorities
    */
   getPriorities: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/priorities`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.PRIORITIES);
   },
 
   /**
    * Get all available classifications
    */
   getClassifications: async () => {
-    return await apiClient.get<string[]>(`${BASE_URL}/signals/classifications`);
+    return await apiClient.get<string[]>(FILTER_ENDPOINTS.CLASSIFICATIONS);
   }
 };
 

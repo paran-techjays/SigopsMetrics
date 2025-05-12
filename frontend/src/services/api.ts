@@ -1,5 +1,6 @@
 // API service for fetching data
-import axios from 'axios';
+import { apiClient } from './api/apiClient';
+import AppConfig from '../utils/appConfig';
 
 // Types
 export interface MetricData {
@@ -31,7 +32,9 @@ export interface MapPoint {
 }
 
 // API base URL
-const API_BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+const API_BASE_URL = AppConfig.settings.API_PATH;
+
+console.log('API_BASE_URL1', API_BASE_URL);
 
 // Map metric IDs to their API keys
 export const metricApiKeys: { [key: string]: string } = {
@@ -100,12 +103,10 @@ export const fetchMetricData = async (
       throw new Error(`Invalid metric: ${metric}`);
     }
     
-    const response = await axios.post(
-      `${API_BASE_URL}/metrics/straightaverage?source=main&measure=${apiKey}`,
+    const data = await apiClient.post<any>(
+      `/metrics/straightaverage?source=main&measure=${apiKey}`,
       getDefaultPayload(region)
     );
-    
-    const data = response.data;
     
     return {
       value: data.avg || 0,
@@ -150,12 +151,12 @@ export const fetchLocationMetrics = async (metric: string, region: string): Prom
       throw new Error(`Invalid metric: ${metric}`);
     }
     
-    const response = await axios.post(
-      `${API_BASE_URL}/metrics/average?source=main&measure=${apiKey}&dashboard=false`,
+    const data = await apiClient.post<any[]>(
+      `/metrics/average?source=main&measure=${apiKey}&dashboard=false`,
       getDefaultPayload(region)
     );
     
-    return response.data.map((item: any) => ({
+    return data.map((item: any) => ({
       location: item.label,
       value: item.avg || 0
     })).sort((a: LocationMetric, b: LocationMetric) => b.value - a.value);
@@ -179,13 +180,13 @@ export const fetchTimeSeriesData = async (
       throw new Error(`Invalid metric: ${metric}`);
     }
     
-    const response = await axios.post(
-      `${API_BASE_URL}/metrics/filter?source=main&measure=${apiKey}`,
+    const data = await apiClient.post<any[]>(
+      `/metrics/filter?source=main&measure=${apiKey}`,
       getDefaultPayload(region)
     );
     
     // Map API response to TimeSeriesData
-    return response.data.map((item: any) => {
+    return data.map((item: any) => {
       const metricValue = item[metricValueKeys[metric]] || 0;
       return {
         date: formatDate(item.month),
@@ -222,15 +223,13 @@ export const fetchMapData = async (metric: string, region: string): Promise<MapP
     }
     
     // Fetch all signals
-    const signalsResponse = await axios.get(`${API_BASE_URL}/signals/all`);
-    const signals = signalsResponse.data;
+    const signals = await apiClient.get<any[]>(`/signals/all`);
     
     // Fetch signal metrics
-    const metricsResponse = await axios.post(
-      `${API_BASE_URL}/metrics/signals/filter/average?source=main&measure=${apiKey}`,
+    const metrics = await apiClient.post<any[]>(
+      `/metrics/signals/filter/average?source=main&measure=${apiKey}`,
       getDefaultPayload(region)
     );
-    const metrics = metricsResponse.data;
     
     // Create a map of signal IDs to metric values
     const metricMap = new Map();

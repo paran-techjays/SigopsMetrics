@@ -1,6 +1,14 @@
 import axios from 'axios';
+import { HEALTH_METRICS_ENDPOINTS } from '../constants/apiEndpoints';
+import AppConfig from '../utils/appConfig';
 
-const API_BASE_URL = 'https://sigopsmetrics-api.dot.ga.gov';
+// Create a simple apiClient for this file
+const axiosInstance = axios.create({
+    baseURL: AppConfig.settings.API_PATH,
+    headers: {
+        'Content-Type': 'application/json',
+    }
+});
 
 // Signal interface to match the one in metricsSlice.ts
 export interface Signal {
@@ -95,7 +103,7 @@ export interface FetchRegionParams {
 
 export const fetchMetrics = async (params: FetchMetricsParams): Promise<MaintenanceMetric[] | OperationsMetric[] | SafetyMetric[]> => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/metrics`, {
+        const response = await axiosInstance.get(HEALTH_METRICS_ENDPOINTS.METRICS, {
             params: {
                 source: params.source || 'main',
                 level: params.level || 'cor',
@@ -114,7 +122,7 @@ export const fetchMetrics = async (params: FetchMetricsParams): Promise<Maintena
 
 export const fetchRegionAverage = async (params: FetchRegionParams): Promise<RegionAverage> => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/metrics/monthaverages`, {
+        const response = await axiosInstance.get(HEALTH_METRICS_ENDPOINTS.MONTH_AVERAGES, {
             params: {
                 zoneGroup: params.zoneGroup,
                 month: params.month

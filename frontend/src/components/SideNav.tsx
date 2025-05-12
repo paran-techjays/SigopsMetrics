@@ -49,7 +49,7 @@ export default function SideNav({ open = true, expanded = true, width }: SideNav
     { text: "Operations", icon: <BarChartIcon />, path: "/operations" },
     { text: "Maintenance", icon: <BuildIcon />, path: "/maintenance" },
     { text: "Watchdog", icon: <VisibilityIcon />, path: "/watchdog" },
-    { text: "TEAMS Tasks", icon: <TaskIcon />, path: "/teams-tasks" },
+    // { text: "TEAMS Tasks", icon: <TaskIcon />, path: "/teams-tasks" },
     { text: "Health Metrics", icon: <HealingIcon />, path: "/health-metrics" },
     { text: "Summary Trend", icon: <TrendingUpIcon />, path: "/summary-trend" },
     { text: "Signal Info", icon: <SettingsInputAntennaIcon />, path: "/signal-info" },

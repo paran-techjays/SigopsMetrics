@@ -122,6 +122,10 @@ const MapBox: FC<MapBoxProps> = ({
     }
   });
 
+  // Separate useEffect for calculating center and zoom to avoid infinite loops
+  const [autoCenter, setAutoCenter] = useState<{lat: number, lon: number} | null>(null);
+  const [autoZoom, setAutoZoom] = useState<number | null>(null);
+
   // Add legend if needed
   useEffect(() => {
     if (showLegend) {
@@ -211,37 +215,53 @@ const MapBox: FC<MapBoxProps> = ({
 
     if (isRawTraces && data.length > 0) {
       // Just use the provided traces directly
-      setMapData((data as MapTrace[]).map(trace => ({ 
-        ...trace, 
-        type: "scattermapbox" 
-      })));
+      setMapData((prevMapData) => {
+        const newData = (data as MapTrace[]).map(trace => ({ 
+          ...trace, 
+          type: "scattermapbox" as "scattermapbox"
+        }));
+        
+        // Check if data actually changed before updating state
+        if (JSON.stringify(prevMapData) === JSON.stringify(newData)) {
+          return prevMapData;
+        }
+        return newData;
+      });
       return;
     }
 
     // Filter signals to only include those with valid coordinates
-    const validSignals = signals.filter(signal => 
+    const validSignals = signals.filter((signal: any) => 
       signal && 
       signal.latitude !== 0 && 
       signal.longitude !== 0
     );
 
     if (validSignals.length === 0) {
-      setMapData([{
-        type: "scattermapbox",
-        lat: [defaultCenter.lat],
-        lon: [defaultCenter.lon],
-        mode: "markers",
-        marker: {
-          size: 1,
-          opacity: 0
-        },
-        hoverinfo: "none"
-      }]);
+      setMapData((prevMapData) => {
+        const newData = [{
+          type: "scattermapbox" as const,
+          lat: [defaultCenter.lat],
+          lon: [defaultCenter.lon],
+          mode: "markers",
+          marker: {
+            size: 1,
+            opacity: 0
+          },
+          hoverinfo: "none"
+        }];
+        
+        // Check if data actually changed before updating state
+        if (JSON.stringify(prevMapData) === JSON.stringify(newData)) {
+          return prevMapData;
+        }
+        return newData;
+      });
       return;
     }
 
     // Join signal data with metrics data
-    const joinedData = validSignals.map(signal => {
+    const joinedData = validSignals.map((signal: any) => {
       // Look for the signal's metrics in the provided data
       const metricData = Array.isArray(data) ? 
         data.find(d => d.signalID === signal.signalID) : 
@@ -258,29 +278,31 @@ const MapBox: FC<MapBoxProps> = ({
         ...signal,
         value: -1  // Unavailable data
       };
-    }).filter(item => item); // Remove any undefined items
+    }).filter((item: any) => item); // Remove any undefined items
     
     // Create trace data based on value ranges
     const traces: MapTrace[] = [];
     
-    for (let i = 0; i < mapSettings.ranges.length; i++) {
-      const range = mapSettings.ranges[i];
-      const rangeSignals = joinedData.filter(signal => 
+    for (let i = 0; i < (mapSettings.ranges?.length || 0); i++) {
+      const range = mapSettings.ranges?.[i];
+      if (!range) continue;
+      
+      const rangeSignals = joinedData.filter((signal: any) => 
         signal.value >= range[0] && signal.value <= range[1]
       );
       
       if (rangeSignals.length > 0) {
         traces.push({
-          type: "scattermapbox",
-          lat: rangeSignals.map(signal => signal.latitude),
-          lon: rangeSignals.map(signal => signal.longitude),
-          text: rangeSignals.map(signal => generateTooltipText(signal)),
+          type: "scattermapbox" as const,
+          lat: rangeSignals.map((signal: any) => signal.latitude),
+          lon: rangeSignals.map((signal: any) => signal.longitude),
+          text: rangeSignals.map((signal: any) => generateTooltipText(signal)),
           marker: {
-            color: mapSettings.legendColors[i],
+            color: mapSettings.legendColors?.[i] || "#000000",
             size: 6
           },
           mode: "markers",
-          name: mapSettings.legendLabels[i],
+          name: mapSettings.legendLabels?.[i] || `Range ${i+1}`,
           showlegend: true,
           hovertemplate: '%{text}' + '<extra></extra>'
         });
@@ -290,7 +312,7 @@ const MapBox: FC<MapBoxProps> = ({
     // If no traces were created (no data in ranges), add default trace
     if (traces.length === 0) {
       traces.push({
-        type: "scattermapbox",
+        type: "scattermapbox" as const,
         lat: [defaultCenter.lat],
         lon: [defaultCenter.lon],
         mode: "markers",
@@ -302,32 +324,78 @@ const MapBox: FC<MapBoxProps> = ({
       });
     }
     
-    setMapData(traces);
-    
-    // Calculate zoom and center based on data points
-    if (traces.length > 0 && traces[0].lat.length > 0 && traces[0].lat[0] !== defaultCenter.lat) {
-      const allLats = traces.flatMap(trace => trace.lat);
-      const allLons = traces.flatMap(trace => trace.lon);
-      
-      if (allLats.length > 0 && allLons.length > 0) {
-        const centerLat = average(allLats);
-        const centerLon = average(allLons);
-        const calculatedZoom = calculateZoom(allLats, allLons);
-        
-        setMapLayout(prevLayout => ({
-          ...prevLayout,
-          mapbox: {
-            ...prevLayout.mapbox,
-            center: {
-              lat: centerLat,
-              lon: centerLon
-            },
-            zoom: calculatedZoom
-          }
-        }));
+    setMapData((prevMapData: MapTrace[]) => {
+      // Check if data actually changed before updating state
+      if (JSON.stringify(prevMapData) === JSON.stringify(traces)) {
+        return prevMapData;
       }
-    }
+      return traces;
+    });
   }, [signals, data, isRawTraces, loading, mapSettings]);
+
+  // Calculate auto center and zoom based on data points
+  useEffect(() => {
+    if (mapData.length === 0 || 
+        mapData[0].lat.length === 0 || 
+        mapData[0].lat[0] === defaultCenter.lat) {
+      return;
+    }
+
+    const allLats = mapData.flatMap(trace => trace.lat);
+    const allLons = mapData.flatMap(trace => trace.lon);
+    
+    if (allLats.length > 0 && allLons.length > 0) {
+      const centerLat = average(allLats);
+      const centerLon = average(allLons);
+      const calculatedZoom = calculateZoom(allLats, allLons);
+      
+      // Only update if values actually changed
+      setAutoCenter((prev: {lat: number, lon: number} | null) => {
+        if (prev && prev.lat === centerLat && prev.lon === centerLon) {
+          return prev;
+        }
+        return { lat: centerLat, lon: centerLon };
+      });
+      
+      setAutoZoom((prev: number | null) => {
+        if (prev === calculatedZoom) {
+          return prev;
+        }
+        return calculatedZoom;
+      });
+    }
+  }, [mapData]);
+
+  // Update layout when auto center/zoom or props change
+  useEffect(() => {
+    const newCenter = center.lat === defaultCenter.lat && center.lon === defaultCenter.lon && autoCenter 
+      ? autoCenter 
+      : center;
+      
+    const newZoom = zoom === defaultZoom && autoZoom !== null 
+      ? autoZoom 
+      : zoom;
+
+    setMapLayout((prevLayout: any) => {
+      // Prevent unnecessary updates by checking if values have actually changed
+      if (prevLayout.mapbox.center.lat === newCenter.lat && 
+          prevLayout.mapbox.center.lon === newCenter.lon && 
+          prevLayout.mapbox.zoom === newZoom && 
+          prevLayout.mapbox.style === mapStyle) {
+        return prevLayout;
+      }
+      
+      return {
+        ...prevLayout,
+        mapbox: {
+          ...prevLayout.mapbox,
+          style: mapStyle,
+          center: newCenter,
+          zoom: newZoom
+        },
+      };
+    });
+  }, [autoCenter, autoZoom, center, zoom, mapStyle]);
 
   // Helper function to format number values
   const formatNumber = (val: number, decimals: number = 0): string => {

@@ -517,6 +517,8 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 value={selectedSignalGroup}
                 label="Select Region"
                 onChange={handleAttributeChange(setSignalGroup)}
+                displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.zoneGroups}
               >
                 {zoneGroups.map((group) => (
@@ -533,6 +535,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select District"
                 onChange={handleAttributeChange(setDistrict)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.zones}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -555,6 +558,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select Managing Agency"
                 onChange={handleAttributeChange(setAgency)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.agencies}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -572,6 +576,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select County"
                 onChange={handleAttributeChange(setCounty)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.counties}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -589,6 +594,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select City"
                 onChange={handleAttributeChange(setCity)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.cities}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -606,6 +612,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select Corridor"
                 onChange={handleAttributeChange(setCorridor)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.corridors}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -624,6 +631,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                   label="Select Subcorridor"
                   onChange={handleAttributeChange(setSubcorridor)}
                   displayEmpty
+                  renderValue={(selected) => selected ? String(selected) : ''}
                   disabled={loading.subcorridors}
                 >
                   <MenuItem value=""><em>None</em></MenuItem>
@@ -642,6 +650,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select Priority"
                 onChange={handleAttributeChange(setPriority)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.priorities}
               >
                 <MenuItem value=""><em>None</em></MenuItem>
@@ -659,6 +668,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label="Select Classification"
                 onChange={handleAttributeChange(setClassification)}
                 displayEmpty
+                renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.classifications}
               >
                 <MenuItem value=""><em>None</em></MenuItem>

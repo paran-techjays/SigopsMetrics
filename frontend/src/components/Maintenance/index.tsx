@@ -16,6 +16,7 @@ import RemoveIcon from "@mui/icons-material/Remove"
 import Plot from "react-plotly.js"
 import MapBox from "../../components/MapBox"
 import { metricApiKeys } from "../../services/api"
+import mapSettings from "../../utils/mapSettings"
 
 // Define the available metrics
 const metrics = [
@@ -96,6 +97,15 @@ interface MapPoint {
   name: string;
   value: number;
 }
+
+// Map metric IDs to mapSettings keys
+const metricToSettingsMap: Record<string, string> = {
+  detectorUptime: "detectorUptime",
+  pedestrianPushbuttonActivity: "pedestrianPushbuttonActivity",
+  pedestrianPushbuttonUptime: "pedestrianPushbuttonUptime",
+  cctvUptime: "cctvUptime",
+  communicationUptime: "communicationUptime",
+};
 
 export default function Maintenance() {
   // State for selected metric
@@ -297,6 +307,11 @@ export default function Maintenance() {
         const max = 15
         const value = point.value
 
+        // Make sure we don't scale unavailable data points
+        if (value === -1) {
+          return min;
+        }
+
         if (selectedMetric === "pedestrianPushbuttonActivity") {
           // Scale for pushbutton activity (10-1000)
           return min + Math.min(((value - 10) / 990) * (max - min), max)
@@ -308,7 +323,30 @@ export default function Maintenance() {
         }
       }),
       color: mapData.map((point) => {
-        // Color based on value
+        // Color based on value using mapSettings
+        const settingsKey = metricToSettingsMap[selectedMetric];
+        const settings = settingsKey ? mapSettings[settingsKey] : null;
+        
+        if (settings) {
+          const value = point.value;
+          
+          // Handle unavailable data
+          if (value === -1) {
+            return settings.legendColors[0]; // First color is for unavailable data
+          }
+          
+          // Find which range the value falls into, starting from index 1 to skip the unavailable range
+          for (let i = 1; i < settings.ranges.length; i++) {
+            const [min, max] = settings.ranges[i];
+            if (value >= min && value <= max) {
+              return settings.legendColors[i];
+            }
+          }
+          // Default to last color if outside all ranges
+          return settings.legendColors[settings.legendColors.length - 1];
+        }
+        
+        // Fallback to default colors if no settings found
         if (isPercentMetric) {
           // High values are good for uptime metrics
           if (point.value < 50) return "#fee2e2"
@@ -331,6 +369,10 @@ export default function Maintenance() {
     text: mapData.map((point) => {
       const metric = metrics.find(m => m.id === selectedMetric);
       const metricName = metric ? metric.label : selectedMetric;
+      // Handle unavailable data
+      if (point.value === -1) {
+        return `${point.signalID}<br>${point.name}<br>No data available`;
+      }
       const valueText = point.value ? formatMetricValue(point.value) : "Unavailable";
       return `${point.signalID}<br>${point.name}<br>${metricName}: ${valueText}`;
     }),
@@ -343,75 +385,86 @@ export default function Maintenance() {
     mapbox: {
       style: "carto-positron",
       center: { lat: 33.789, lon: -84.388 },
-      zoom: 11,
+      zoom: 8,
     },
     margin: { r: 0, t: 0, b: 0, l: 0 },
   }
 
   // Get the appropriate legend for the map based on the selected metric
   const getMapLegend = () => {
-    if (selectedMetric === "pedestrianPushbuttonActivity") {
+    const settingsKey = metricToSettingsMap[selectedMetric];
+    const settings = settingsKey ? mapSettings[settingsKey] : null;
+
+    if (settings) {
       return (
         <>
-          <Typography variant="subtitle2" gutterBottom>
-            Push Button Activity
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#93c5fd", mr: 1 }} />
-            <Typography variant="caption">0 - 100</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#60a5fa", mr: 1 }} />
-            <Typography variant="caption">101 - 250</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#3b82f6", mr: 1 }} />
-            <Typography variant="caption">251 - 500</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#2563eb", mr: 1 }} />
-            <Typography variant="caption">501 - 750</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#1d4ed8", mr: 1 }} />
-            <Typography variant="caption">750+</Typography>
-          </Box>
+          {settings.ranges.map((range, index) => (
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }} key={index}>
+              <Box sx={{ width: 8, height: 8, bgcolor: settings.legendColors[index], mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">{settings.legendLabels[index]}</Typography>
+            </Box>
+          ))}
         </>
-      )
-    } else if (isPercentMetric) {
-      return (
-        <>
-          <Typography variant="subtitle2" gutterBottom>
-            Uptime
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#fee2e2", mr: 1 }} />
-            <Typography variant="caption">0% - 50%</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#fecaca", mr: 1 }} />
-            <Typography variant="caption">51% - 70%</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#fca5a5", mr: 1 }} />
-            <Typography variant="caption">71% - 85%</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#f87171", mr: 1 }} />
-            <Typography variant="caption">86% - 95%</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Box sx={{ width: 16, height: 16, bgcolor: "#ef4444", mr: 1 }} />
-            <Typography variant="caption">96% - 100%</Typography>
-          </Box>
-        </>
-      )
+      );
     } else {
-      return (
-        <Typography variant="subtitle2" gutterBottom>
-          No legend available
-        </Typography>
-      )
+      // Fallback to original legends if settings not found
+      if (selectedMetric === "pedestrianPushbuttonActivity") {
+        return (
+          <>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#93c5fd", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">0 - 100</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#60a5fa", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">101 - 250</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#3b82f6", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">251 - 500</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#2563eb", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">501 - 750</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#1d4ed8", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">750+</Typography>
+            </Box>
+          </>
+        )
+      } else if (isPercentMetric) {
+        return (
+          <>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#fee2e2", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">0% - 50%</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#fecaca", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">51% - 70%</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#fca5a5", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">71% - 85%</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#f87171", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">86% - 95%</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#ef4444", mr: 1, borderRadius: 4 }} />
+              <Typography variant="caption">96% - 100%</Typography>
+            </Box>
+          </>
+        )
+      } else {
+        return (
+          <Typography variant="subtitle2" gutterBottom>
+            No legend available
+          </Typography>
+        )
+      }
     }
   }
 
@@ -457,8 +510,7 @@ export default function Maintenance() {
       <Tabs
         value={selectedMetric}
         onChange={handleMetricChange}
-        variant="scrollable"
-        scrollButtons="auto"
+        variant="fullWidth"
         sx={{
           mb: 2,
           borderBottom: 1,
@@ -485,9 +537,22 @@ export default function Maintenance() {
           <Grid container spacing={2}>
             {/* Metric Display */}
             <Grid size={{xs: 12, md: 4}}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 2, 
+                height: '100%'
+              }}>
                 {/* Metric Card */}
-                <Paper sx={{ p: 3, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                <Paper sx={{ 
+                  p: 3, 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flex: 1,
+                  minHeight: "130px"
+                }}>
                   <Typography variant="h3" component="div" gutterBottom>
                     {metricData && formatMetricValue(metricData.avg)}
                   </Typography>
@@ -497,7 +562,15 @@ export default function Maintenance() {
                 </Paper>
 
                 {/* Trend Indicator Card */}
-                <Paper sx={{ p: 3, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                <Paper sx={{ 
+                  p: 3, 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flex: 1,
+                  minHeight: "130px"
+                }}>
                   {metricData && metricData.delta !== undefined && (
                     <>
                       <Typography
@@ -534,8 +607,18 @@ export default function Maintenance() {
 
             {/* Map */}
             <Grid size={{xs: 12, md: 8}}>
-              <Paper sx={{ p: 2, height: "100%", minHeight: 350 }}>
-                <Box sx={{ height: "100%", width: "100%", position: "relative" }}>
+              <Paper sx={{ 
+                p: 2, 
+                height: "100%", 
+                display: "flex", 
+                flexDirection: "column"
+              }}>
+                <Box sx={{ 
+                  flexGrow: 1, 
+                  width: "100%", 
+                  position: "relative", 
+                  minHeight: { xs: "350px", md: "284px" } /* 2*130px (cards) + 2*12px (gap) */
+                }}>
                   {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                       <CircularProgress />
@@ -548,7 +631,7 @@ export default function Maintenance() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={11}
+                        zoom={8}
                         renderLegend={getMapLegend}
                       />
                     </>

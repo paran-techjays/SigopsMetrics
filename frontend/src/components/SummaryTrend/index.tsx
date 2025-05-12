@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, Grid, Box, CircularProgress, Typography } from '@mui/material';
+import { Card, CardContent, Grid, Box, CircularProgress, Typography, Container, Paper } from '@mui/material';
 import LineGraph from '../LineGraph';
 import { Graph } from '../../utils/graph';
 import { Metrics } from '../../utils/metrics';
@@ -7,6 +7,8 @@ import { Colors } from '../../utils/colors';
 import { useAppDispatch, useAppSelector } from '../../hooks/useTypedSelector';
 import { fetchSummaryTrends } from '../../store/slices/summaryTrendSlice';
 import { FilterParams } from '../../types/api.types';
+import FilterChipList from '../FilterChipList';
+import AppConfig from '../../utils/appConfig';
 
 const SummaryTrend: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -44,6 +46,7 @@ const SummaryTrend: React.FC = () => {
   // Performance metrics
   const tpGraphMetrics = new Metrics({
     measure: "tp",
+    label: "Throughput"
   });
   const tpGraph: Graph = {
     x: "month",
@@ -57,6 +60,7 @@ const SummaryTrend: React.FC = () => {
     measure: "aogd",
     formatDecimals: 1,
     formatType: "percent",
+    label: "Arrivals on Green"
   });
   const aogGraph: Graph = {
     x: "month",
@@ -69,6 +73,7 @@ const SummaryTrend: React.FC = () => {
   const prdGraphMetrics = new Metrics({
     measure: "prd",
     formatDecimals: 2,
+    label: "Progression Ratio"
   });
   const prdGraph: Graph = {
     x: "month",
@@ -82,6 +87,7 @@ const SummaryTrend: React.FC = () => {
     measure: "qsd",
     formatDecimals: 1,
     formatType: "percent",
+    label: "Queue Spillback"
   });
   const qsdGraph: Graph = {
     x: "month",
@@ -96,6 +102,7 @@ const SummaryTrend: React.FC = () => {
     measure: "sfd",
     formatDecimals: 1,
     formatType: "percent",
+    label: "Peak Period Split Failure"
   });
   const sfGraph: Graph = {
     x: "month",
@@ -109,13 +116,15 @@ const SummaryTrend: React.FC = () => {
     measure: "sfo",
     formatDecimals: 1,
     formatType: "percent",
+    label: "Off-Peak Split Failure"
   });
 
   const ttiTitle = "Travel Time Index";
   const ttiGraphMetrics = new Metrics({
     measure: "tti",
     formatDecimals: 2,
-    goal: 1.5, // This would ideally come from AppConfig.settings.ttiGoal
+    label: "Travel Time Index",
+    goal: AppConfig.settings.ttiGoal
   });
   const ttiGraph: Graph = {
     x: "month",
@@ -128,7 +137,8 @@ const SummaryTrend: React.FC = () => {
   const ptiGraphMetrics = new Metrics({
     measure: "pti",
     formatDecimals: 2,
-    goal: 2.0, // This would ideally come from AppConfig.settings.ptiGoal
+    label: "Planning Time Index",
+    goal: AppConfig.settings.ptiGoal
   });
   const ptiGraph: Graph = {
     x: "month",
@@ -141,6 +151,7 @@ const SummaryTrend: React.FC = () => {
   const dtvTitle = "Daily Volume";
   const dtvGraphMetrics = new Metrics({
     measure: "vpd",
+    label: "Daily Volume"
   });
   const dtvGraph: Graph = {
     x: "month",
@@ -152,6 +163,7 @@ const SummaryTrend: React.FC = () => {
   const amvTitle = "AM Hourly Volume";
   const amvGraphMetrics = new Metrics({
     measure: "vphpa",
+    label: "AM Hourly Volume"
   });
   const amvGraph: Graph = {
     x: "month",
@@ -163,6 +175,7 @@ const SummaryTrend: React.FC = () => {
   const pmvTitle = "PM Hourly Volume";
   const pmvGraphMetrics = new Metrics({
     measure: "vphpp",
+    label: "PM Hourly Volume"
   });
   const pmvGraph: Graph = {
     x: "month",
@@ -174,6 +187,7 @@ const SummaryTrend: React.FC = () => {
   const paTitle = "Pedestrian Activations";
   const paGraphMetrics = new Metrics({
     measure: "papd",
+    label: "Pedestrian Activations"
   });
   const paGraph: Graph = {
     x: "month",
@@ -187,7 +201,8 @@ const SummaryTrend: React.FC = () => {
     measure: "du",
     formatDecimals: 1,
     formatType: "percent",
-    goal: 0.85, // This would ideally come from AppConfig.settings.duGoal
+    label: "Detector Uptime",
+    goal: AppConfig.settings.duGoal
   });
   const duGraph: Graph = {
     x: "month",
@@ -201,7 +216,8 @@ const SummaryTrend: React.FC = () => {
     measure: "pau",
     formatDecimals: 1,
     formatType: "percent",
-    goal: 0.95, // This would ideally come from AppConfig.settings.ppuGoal
+    label: "Ped Pushbutton Uptime",
+    goal: AppConfig.settings.ppuGoal
   });
   const pauGraph: Graph = {
     x: "month",
@@ -215,7 +231,8 @@ const SummaryTrend: React.FC = () => {
     measure: "cctv",
     formatDecimals: 1,
     formatType: "percent",
-    goal: 0.90, // This would ideally come from AppConfig.settings.cctvGoal
+    label: "CCTV Uptime",
+    goal: AppConfig.settings.cctvGoal
   });
   const cctvGraph: Graph = {
     x: "month",
@@ -229,7 +246,8 @@ const SummaryTrend: React.FC = () => {
     measure: "cu",
     formatDecimals: 1,
     formatType: "percent",
-    goal: 0.95, // This would ideally come from AppConfig.settings.cuGoal
+    label: "Comm Uptime",
+    goal: AppConfig.settings.cuGoal
   });
   const cuGraph: Graph = {
     x: "month",
@@ -259,7 +277,7 @@ const SummaryTrend: React.FC = () => {
   };
 
   useEffect(() => {
-    // Fetch summary trends data
+    // Fetch summary trends data when filter changes
     dispatch(fetchSummaryTrends(filterState));
     setHourlyStrings(filterState);
   }, [dispatch, filterState]);
@@ -290,142 +308,136 @@ const SummaryTrend: React.FC = () => {
 
   return (
     <>
-      {/* <FilterChipList onFilterChange={handleFilterChange} activeFilters={filterState} /> */}
+      <FilterChipList onFilterChange={handleFilterChange} activeFilters={filterState} />
       
       {data && (
-        <Box sx={{ padding: 2 }}>
-          <Grid container spacing={2}>
-            <Grid size={6}>
-              <Card sx={{ height: '100%' }}>
-                <CardHeader title="Performance" />
-                <CardContent>
-                  <Box sx={{ '& > *': { marginBottom: 3 } }}>
-                    <LineGraph 
-                      data={data.tp} 
-                      title={tpTitle}
-                      line={tpGraph}
-                      metrics={tpGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data[aogString]} 
-                      title={aogTitle}
-                      line={aogGraph}
-                      metrics={aogGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data[prString]} 
-                      title={prdTitle}
-                      line={prdGraph}
-                      metrics={prdGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data[qsString]} 
-                      title={qsdTitle}
-                      line={qsdGraph}
-                      metrics={qsdGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data[sfString]} 
-                      title={sfdTitle}
-                      line={sfGraph}
-                      metrics={sfdGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.sfo} 
-                      title={sfoTitle}
-                      line={sfGraph}
-                      metrics={sfoGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.tti} 
-                      title={ttiTitle}
-                      line={ttiGraph}
-                      metrics={ttiGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.pti} 
-                      title={ptiTitle}
-                      line={ptiGraph}
-                      metrics={ptiGraphMetrics}
-                    />
-                  </Box>
-                </CardContent>
-              </Card>
+        <Container maxWidth={false}>
+          <Grid container spacing={3}>
+            <Grid size={{xs: 12, md: 6}}>
+              <Paper sx={{ p: 3, boxShadow: 1 }}>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'medium' }}>Performance</Typography>
+                
+                <LineGraph 
+                  data={data.tp} 
+                  title={tpTitle}
+                  graph={tpGraph}
+                  metrics={tpGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data[aogString]} 
+                  title={aogTitle}
+                  graph={aogGraph}
+                  metrics={aogGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data[prString]} 
+                  title={prdTitle}
+                  graph={prdGraph}
+                  metrics={prdGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data[qsString]} 
+                  title={qsdTitle}
+                  graph={qsdGraph}
+                  metrics={qsdGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data[sfString]} 
+                  title={sfdTitle}
+                  graph={sfGraph}
+                  metrics={sfdGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.sfo} 
+                  title={sfoTitle}
+                  graph={sfGraph}
+                  metrics={sfoGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.tti} 
+                  title={ttiTitle}
+                  graph={ttiGraph}
+                  metrics={ttiGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.pti} 
+                  title={ptiTitle}
+                  graph={ptiGraph}
+                  metrics={ptiGraphMetrics}
+                />
+              </Paper>
             </Grid>
             
-            <Grid size={6}>
-              <Card sx={{ height: '100%' }}>
-                <CardHeader title="Volumes and Equipment" />
-                <CardContent>
-                  <Box sx={{ '& > *': { marginBottom: 3 } }}>
-                    <LineGraph 
-                      data={data[vpString]} 
-                      title={dtvTitle}
-                      line={dtvGraph}
-                      metrics={dtvGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.vphpa} 
-                      title={amvTitle}
-                      line={amvGraph}
-                      metrics={amvGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.vphpp} 
-                      title={pmvTitle}
-                      line={pmvGraph}
-                      metrics={pmvGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data[papString]} 
-                      title={paTitle}
-                      line={paGraph}
-                      metrics={paGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.du} 
-                      title={duTitle}
-                      line={duGraph}
-                      metrics={duGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.pau} 
-                      title={pauTitle}
-                      line={pauGraph}
-                      metrics={pauGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.cctv} 
-                      title={cctvTitle}
-                      line={cctvGraph}
-                      metrics={cctvGraphMetrics}
-                    />
-                    
-                    <LineGraph 
-                      data={data.cu} 
-                      title={cuTitle}
-                      line={cuGraph}
-                      metrics={cuGraphMetrics}
-                    />
-                  </Box>
-                </CardContent>
-              </Card>
+            <Grid size={{xs: 12, md: 6}}>
+              <Paper sx={{ p: 3, boxShadow: 1 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'medium' }}>Volumes and Equipment</Typography>
+                
+                <LineGraph 
+                  data={data[vpString]} 
+                  title={dtvTitle}
+                  graph={dtvGraph}
+                  metrics={dtvGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.vphpa} 
+                  title={amvTitle}
+                  graph={amvGraph}
+                  metrics={amvGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.vphpp} 
+                  title={pmvTitle}
+                  graph={pmvGraph}
+                  metrics={pmvGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data[papString]} 
+                  title={paTitle}
+                  graph={paGraph}
+                  metrics={paGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.du} 
+                  title={duTitle}
+                  graph={duGraph}
+                  metrics={duGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.pau} 
+                  title={pauTitle}
+                  graph={pauGraph}
+                  metrics={pauGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.cctv} 
+                  title={cctvTitle}
+                  graph={cctvGraph}
+                  metrics={cctvGraphMetrics}
+                />
+                
+                <LineGraph 
+                  data={data.cu} 
+                  title={cuTitle}
+                  graph={cuGraph}
+                  metrics={cuGraphMetrics}
+                />
+              </Paper>
             </Grid>
           </Grid>
-        </Box>
+        </Container>
       )}
     </>
   );

@@ -470,7 +470,10 @@ const MapBox: FC<MapBoxProps> = ({
         height: height, 
         width: width, 
         position: "relative",
-        minHeight: typeof height === 'number' ? height : 350
+        minHeight: typeof height === 'number' ? height : 350,
+        flexGrow: 1,
+        display: "flex",
+        flexDirection: "column"
       }}
     >
       {loading ? (
@@ -478,11 +481,11 @@ const MapBox: FC<MapBoxProps> = ({
           <CircularProgress />
         </Box>
       ) : (
-        <>
+        <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, position: 'relative', height: '100%' }}>
           <Plot
             data={mapData as any}
             layout={mapLayout as any}
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%", flexGrow: 1 }}
             config={{ 
               displayModeBar: true,
               modeBarButtonsToAdd: [
@@ -539,7 +542,7 @@ const MapBox: FC<MapBoxProps> = ({
               {renderLegend()}
             </Paper>
           )}
-        </>
+        </Box>
       )}
     </Box>
   );

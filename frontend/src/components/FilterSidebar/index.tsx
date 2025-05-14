@@ -381,37 +381,45 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
       <Box sx={{ p: 2, overflowY: "auto", height: 'calc(100% - 64px)' }}>
         {/* Header with loading indicator */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-          <Typography variant="h6">
+          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 500 }}>
             Filters {isLoading && <CircularProgress size={16} sx={{ ml: 1 }} />}
           </Typography>
-          <IconButton onClick={onClose} aria-label="close drawer">
-            <ChevronRightIcon />
-          </IconButton>
         </Box>
         <Divider sx={{ mb: 2 }} />
 
         {/* Error State Message */}
         {errorState === 2 && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2, fontSize: '0.75rem' }}>
             The current metric is not fully compatible with the selected filter. Please select another metric or another filter.
           </Alert>
         )}
 
         {/* === Date Range === */}
         <FormControl component="fieldset" sx={{ mb: 2, width: "100%" }}>
-          <FormLabel component="legend">Date Range</FormLabel>
-          <RadioGroup value={selectedDateOption} onChange={handleDateRangeChange}>
+          <FormLabel component="legend" sx={{ fontSize: '0.8rem', mb: 0.5, color: 'text.primary' }}>Date Range</FormLabel>
+          <RadioGroup 
+            value={selectedDateOption} 
+            onChange={handleDateRangeChange}
+            sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}
+          >
             {dateRangeOptions.map((option) => (
               <FormControlLabel
                 key={option.value}
                 value={option.value}
                 control={<Radio size="small" />}
                 label={option.label}
+                sx={{ 
+                  m: 0, 
+                  '& .MuiFormControlLabel-label': { 
+                    fontSize: '0.75rem',
+                    color: 'text.secondary' 
+                  }
+                }}
               />
             ))}
           </RadioGroup>
         </FormControl>
-
+        
         {/* Custom Date/Time Fields (Conditional) */}
         {selectedDateOption === "5" && (
           <Box sx={{ pl: 2, mb: 2 }}>
@@ -420,28 +428,28 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
               type="date"
               value={startDate || ''}
               onChange={handleStartDateChange}
-              InputLabelProps={{ shrink: true }}
+              InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
               size="small"
               fullWidth
-              sx={{ mb: 1 }}
+              sx={{ mb: 1, '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
             />
             <TextField
               label="End Date"
               type="date"
               value={endDate || ''}
               onChange={handleEndDateChange}
-              InputLabelProps={{ shrink: true }}
+              InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
               size="small"
               fullWidth
-              sx={{ mb: 2 }}
+              sx={{ mb: 2, '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
             />
 
             <Divider sx={{ my: 1 }} />
-            <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.8rem' }}>Time Range</FormLabel>
+            <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.75rem', color: 'text.primary' }}>Time Range</FormLabel>
             <FormControlLabel
               control={<Checkbox checked={allDayChecked} onChange={handleAllDayChange} size="small" />}
               label="All day"
-              sx={{ mb: 1 }}
+              sx={{ mb: 1, '& .MuiFormControlLabel-label': { fontSize: '0.75rem', color: 'text.secondary' } }}
             />
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
               <TextField
@@ -449,10 +457,10 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 type="time"
                 value={startTime}
                 onChange={handleTimeChange(setStartTime)}
-                InputLabelProps={{ shrink: true }}
+                InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                 inputProps={{ step: 300 }} // 5 min step
                 size="small"
-                sx={{ flexGrow: 1 }}
+                sx={{ flexGrow: 1, '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
                 disabled={allDayChecked}
               />
               <TextField
@@ -460,10 +468,10 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 type="time"
                 value={endTime}
                 onChange={handleTimeChange(setEndTime)}
-                InputLabelProps={{ shrink: true }}
+                InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                 inputProps={{ step: 300 }} // 5 min step
                 size="small"
-                sx={{ flexGrow: 1 }}
+                sx={{ flexGrow: 1, '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
                 disabled={allDayChecked}
               />
             </Stack>
@@ -473,8 +481,12 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
 
         {/* === Data Aggregation === */}
         <FormControl component="fieldset" sx={{ mb: 2, width: "100%" }}>
-          <FormLabel component="legend">Data Aggregation</FormLabel>
-          <RadioGroup value={selectedAggregationOption} onChange={handleAggregationChange}>
+          <FormLabel component="legend" sx={{ fontSize: '0.8rem', mb: 0.5, color: 'text.primary' }}>Data Aggregation</FormLabel>
+          <RadioGroup
+            value={selectedAggregationOption}
+            onChange={handleAggregationChange}
+            sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}
+          >
             {aggregationOptions.map((option) => (
               <FormControlLabel
                 key={option.value}
@@ -483,6 +495,13 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 label={option.label}
                 // Disable certain options based on date range (matching Angular logic)
                 disabled={parseInt(selectedDateOption) < parseInt(option.value) && selectedDateOption !== "5"}
+                sx={{ 
+                  m: 0, 
+                  '& .MuiFormControlLabel-label': { 
+                    fontSize: '0.75rem',
+                    color: 'text.secondary' 
+                  }
+                }}
               />
             ))}
           </RadioGroup>
@@ -491,16 +510,17 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
 
         {/* === Signal ID === */}
         <FormControl sx={{ mb: 2, width: "100%" }}>
-          <FormLabel component="legend" sx={{ mb: 1 }}>
+          <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.8rem', color: 'text.primary' }}>
             Signal ID
           </FormLabel>
           <TextField
             size="small"
-            placeholder="Enter ID"
+            placeholder="Enter Id"
             type="number"
             value={signalId}
             onChange={handleSignalIdChange}
             fullWidth
+            sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
           />
         </FormControl>
         <Divider sx={{ mb: 2 }} />
@@ -508,11 +528,11 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
         {/* === Signal Attributes (Conditional) === */}
         {!signalId && (
           <Box>
-            <FormLabel component="legend" sx={{ mb: 1 }}>Signal Attributes</FormLabel>
+            <FormLabel component="legend" sx={{ mb: 1, fontSize: '0.8rem', color: 'text.primary' }}>Signal Attributes</FormLabel>
             
             {/* Region */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select Region</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select Region</InputLabel>
               <Select
                 value={selectedSignalGroup}
                 label="Select Region"
@@ -520,16 +540,17 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.zoneGroups}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
                 {zoneGroups.map((group) => (
-                  <MenuItem key={group} value={group}>{group}</MenuItem>
+                  <MenuItem key={group} value={group} sx={{ fontSize: '0.75rem' }}>{group}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* District */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select District</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select District</InputLabel>
               <Select
                 value={selectedDistrict}
                 label="Select District"
@@ -537,22 +558,23 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.zones}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {loading.zones ? (
-                  <MenuItem disabled>Loading districts...</MenuItem>
+                  <MenuItem disabled sx={{ fontSize: '0.75rem' }}>Loading districts...</MenuItem>
                 ) : (
                   // Sort zones alphabetically
                   [...zones].sort().map((district) => (
-                    <MenuItem key={district} value={district}>{district}</MenuItem>
+                    <MenuItem key={district} value={district} sx={{ fontSize: '0.75rem' }}>{district}</MenuItem>
                   ))
                 )}
               </Select>
             </FormControl>
 
             {/* Managing Agency */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select Managing Agency</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select Managing Agency</InputLabel>
               <Select
                 value={selectedAgency}
                 label="Select Managing Agency"
@@ -560,17 +582,18 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.agencies}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {agencies.map((agency) => (
-                  <MenuItem key={agency} value={agency}>{agency}</MenuItem>
+                  <MenuItem key={agency} value={agency} sx={{ fontSize: '0.75rem' }}>{agency}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* County */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select County</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select County</InputLabel>
               <Select
                 value={selectedCounty}
                 label="Select County"
@@ -578,17 +601,18 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.counties}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {counties.map((county) => (
-                  <MenuItem key={county} value={county}>{county}</MenuItem>
+                  <MenuItem key={county} value={county} sx={{ fontSize: '0.75rem' }}>{county}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* City */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select City</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select City</InputLabel>
               <Select
                 value={selectedCity}
                 label="Select City"
@@ -596,17 +620,18 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.cities}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {cities.map((city) => (
-                  <MenuItem key={city} value={city}>{city}</MenuItem>
+                  <MenuItem key={city} value={city} sx={{ fontSize: '0.75rem' }}>{city}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* Corridor */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select Corridor</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select Corridor</InputLabel>
               <Select
                 value={selectedCorridor}
                 label="Select Corridor"
@@ -614,18 +639,19 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.corridors}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {corridors.map((corridor) => (
-                  <MenuItem key={corridor} value={corridor}>{corridor}</MenuItem>
+                  <MenuItem key={corridor} value={corridor} sx={{ fontSize: '0.75rem' }}>{corridor}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* Subcorridor (Conditional based on selectedCorridor) */}
             {selectedCorridor && (
-              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                <InputLabel>Select Subcorridor</InputLabel>
+              <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                <InputLabel sx={{ fontSize: '0.75rem' }}>Select Subcorridor</InputLabel>
                 <Select
                   value={selectedSubcorridor}
                   label="Select Subcorridor"
@@ -633,18 +659,19 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                   displayEmpty
                   renderValue={(selected) => selected ? String(selected) : ''}
                   disabled={loading.subcorridors}
+                  sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
                 >
-                  <MenuItem value=""><em>None</em></MenuItem>
+                  <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                   {subcorridors.map((sub) => (
-                    <MenuItem key={sub} value={sub}>{sub}</MenuItem>
+                    <MenuItem key={sub} value={sub} sx={{ fontSize: '0.75rem' }}>{sub}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
             )}
 
             {/* Priority */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select Priority</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select Priority</InputLabel>
               <Select
                 value={selectedPriority}
                 label="Select Priority"
@@ -652,17 +679,18 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.priorities}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {priorities.map((priority) => (
-                  <MenuItem key={priority} value={priority}>{priority}</MenuItem>
+                  <MenuItem key={priority} value={priority} sx={{ fontSize: '0.75rem' }}>{priority}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
             {/* Classification */}
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Select Classification</InputLabel>
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel sx={{ fontSize: '0.75rem' }}>Select Classification</InputLabel>
               <Select
                 value={selectedClassification}
                 label="Select Classification"
@@ -670,10 +698,11 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
                 displayEmpty
                 renderValue={(selected) => selected ? String(selected) : ''}
                 disabled={loading.classifications}
+                sx={{ '& .MuiSelect-select': { fontSize: '0.75rem' } }}
               >
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.75rem' }}><em>None</em></MenuItem>
                 {classifications.map((cls) => (
-                  <MenuItem key={cls} value={cls}>{cls}</MenuItem>
+                  <MenuItem key={cls} value={cls} sx={{ fontSize: '0.75rem' }}>{cls}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -684,13 +713,28 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
 
         {/* Action Buttons */}
         <Stack direction="row" spacing={1} justifyContent="space-evenly">
-          <Button variant="outlined" onClick={handleSaveDefaults} size="small">
+          <Button 
+            variant="outlined" 
+            onClick={handleSaveDefaults} 
+            size="small"
+            sx={{ fontSize: '0.75rem', py: 0.5 }}
+          >
             Set As Defaults
           </Button>
-          <Button variant="outlined" onClick={handleClear} size="small">
+          <Button 
+            variant="outlined" 
+            onClick={handleClear} 
+            size="small"
+            sx={{ fontSize: '0.75rem', py: 0.5 }}
+          >
             Clear
           </Button>
-          <Button variant="contained" onClick={handleApply} size="small">
+          <Button 
+            variant="contained" 
+            onClick={handleApply} 
+            size="small"
+            sx={{ fontSize: '0.75rem', py: 0.5 }}
+          >
             Apply
           </Button>
         </Stack>

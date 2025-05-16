@@ -60,8 +60,11 @@ import {
   fetchSubcorridors,
   fetchSubcorridorsByCorridor,
   fetchPriorities,
-  fetchClassifications
+  fetchClassifications,
+  selectFilterParams,
+  setFiltersApplied
 } from "../../store/slices/filterSlice"
+import { store } from "../../store"
 
 // Date range and aggregation options
 const dateRangeOptions = [
@@ -133,10 +136,7 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
     console.log("Initial component mount - loading all data");
     dispatch(loadSavedFilters());
     dispatch(fetchZoneGroups());
-    
-    // Always fetch all zones first to populate the district dropdown
     dispatch(fetchZones());
-    
     dispatch(fetchAgencies());
     dispatch(fetchCounties());
     dispatch(fetchCities());
@@ -144,38 +144,6 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
     dispatch(fetchPriorities());
     dispatch(fetchClassifications());
   }, [dispatch]);
-
-  // Only load filtered zones when zone group changes AND it's not the initial load
-  useEffect(() => {
-    // Don't fetch on initial mount since we already do that in the first useEffect
-    if (selectedSignalGroup && zoneGroups.length > 0) {
-      console.log(`Zone group selected: ${selectedSignalGroup}, fetching zones for this group`);
-      dispatch(fetchZonesByZoneGroup(selectedSignalGroup));
-    }
-  }, [selectedSignalGroup, zoneGroups.length, dispatch]);
-
-  // Load subcorridors when corridor changes
-  useEffect(() => {
-    if (selectedCorridor) {
-      dispatch(fetchSubcorridorsByCorridor(selectedCorridor));
-    } else {
-      dispatch(fetchSubcorridors());
-    }
-  }, [selectedCorridor, dispatch]);
-
-  // Update corridors when filtering options change
-  useEffect(() => {
-    // Only trigger API call if any of these filters has a value
-    if (selectedSignalGroup || selectedDistrict || selectedAgency || selectedCounty || selectedCity) {
-      dispatch(fetchCorridorsByFilter({
-        zoneGroup: selectedSignalGroup,
-        zone: selectedDistrict,
-        agency: selectedAgency,
-        county: selectedCounty,
-        city: selectedCity
-      }));
-    }
-  }, [selectedSignalGroup, selectedDistrict, selectedAgency, selectedCounty, selectedCity, dispatch]);
 
   // === Event Handlers ===
   const handleDateRangeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,34 +186,9 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
     const value = event.target.value as string;
     dispatch(actionCreator(value));
     
-    // Make API calls based on selection changes
-    if (actionCreator === setSignalGroup) {
-      // When signal group changes, fetch zones for that group
-      if (value) {
-        console.log(`Signal group selection changed to: ${value}, fetching zones`);
-        dispatch(fetchZonesByZoneGroup(value));
-      } else {
-        // If signal group is cleared, load all zones
-        console.log('Signal group cleared, loading all zones');
-        dispatch(fetchZones());
-      }
-    } else if (actionCreator === setCorridor && value) {
-      console.log(`Corridor selection changed to: ${value}, fetching subcorridors`);
-      dispatch(fetchSubcorridorsByCorridor(value));
-    }
+    // Just set isFiltering to true, no API calls
+    dispatch(setIsFiltering(true));
     
-    // Update corridors whenever filter attributes change
-    if ([setSignalGroup, setDistrict, setAgency, setCounty, setCity].includes(actionCreator)) {
-      console.log('Filter attribute changed, updating corridors');
-      dispatch(fetchCorridorsByFilter({
-        zoneGroup: actionCreator === setSignalGroup ? value : selectedSignalGroup,
-        zone: actionCreator === setDistrict ? value : selectedDistrict,
-        agency: actionCreator === setAgency ? value : selectedAgency,
-        county: actionCreator === setCounty ? value : selectedCounty,
-        city: actionCreator === setCity ? value : selectedCity
-      }));
-    }
-
     // Log selection changes for debugging
     console.log(`Changed ${actionCreator.name} to:`, value);
   }
@@ -311,48 +254,50 @@ export default function FilterSidebar({ open, width, onClose, onApplyFilter }: F
     dispatch(fetchClassifications());
   }
 
-  const handleApply = () => {
+  const handleApply = async () => {
     console.log('Applying filters');
     
-    // Get current filter state for callback
-    const currentFilters = {
-      dateRange: selectedDateOption,
-      customStart: startDate,
-      customEnd: endDate,
-      startTime,
-      endTime,
-      timePeriod: selectedAggregationOption,
-      signalId: signalId || null,
-      zone_Group: selectedSignalGroup || null,
-      zone: selectedDistrict || null,
-      agency: selectedAgency || null,
-      county: selectedCounty || null,
-      city: selectedCity || null,
-      corridor: selectedCorridor || null,
-      subcorridor: selectedSubcorridor || null,
-      priority: selectedPriority || null,
-      classification: selectedClassification || null
-    };
+    // Get current filter state using the selector
+    const currentFilters = selectFilterParams(store.getState());
+    
+    // Make all necessary API calls based on current selections
+    if (currentFilters.zone_Group) {
+        await dispatch(fetchZonesByZoneGroup(currentFilters.zone_Group));
+    }
+    
+    if (currentFilters.corridor) {
+        await dispatch(fetchSubcorridorsByCorridor(currentFilters.corridor));
+    }
+    
+    // Update corridors based on all selected filters
+    await dispatch(fetchCorridorsByFilter({
+        zoneGroup: currentFilters.zone_Group,
+        zone: currentFilters.zone || undefined,
+        agency: currentFilters.agency || undefined,
+        county: currentFilters.county || undefined,
+        city: currentFilters.city || undefined
+    }));
     
     // Reset error state to normal when applying filters
-    // This matches the Angular behavior (see filter-sidenav.component.ts applyFilter method)
     dispatch(setErrorState(1));
     
     // Set isFiltering to false to indicate filter is applied
     dispatch(setIsFiltering(false));
     
+    // Set filtersApplied to true to trigger data refresh in dashboard
+    dispatch(setFiltersApplied(true));
+    
     // Call parent component callback if provided
     if (onApplyFilter) {
-      onApplyFilter(currentFilters);
+        onApplyFilter(currentFilters);
     }
     
     onClose();
   }
 
-  const handleSaveDefaults = () => {
+  const handleSaveDefaults = async () => {
     dispatch(saveAsDefaults());
-    dispatch(setIsFiltering(false));
-    handleApply();
+    await handleApply();
   }
 
   // Check if any dropdown is loading

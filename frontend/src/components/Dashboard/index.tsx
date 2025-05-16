@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAllSignals } from "../../store/slices/metricsSlice";
-import { AppDispatch, RootState } from "../../store/store";
+import { fetchAllSignals, fetchStraightAverage, fetchSignalsFilterAverage } from "../../store/slices/metricsSlice";
+import { AppDispatch, RootState, store } from "../../store/store";
+import { selectFilterParams } from "../../store/slices/filterSlice";
 import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Paper from "@mui/material/Paper"
@@ -23,6 +24,7 @@ import MapBox, { MapTrace } from "../../components/MapBox"
 import { metricsApi } from "../../services/api/metricsApi";
 import { FilterParams, MetricsFilterRequest } from "../../types/api.types";
 import mapSettings from "../../utils/mapSettings";
+import { useAppSelector, useAppDispatch } from '../../hooks/useTypedSelector';
 
 interface MetricRow {
   label: string
@@ -141,38 +143,105 @@ interface MetricDataItem {
   weight: number;
 }
 
+interface MapPoint {
+  signalID: string;
+  lat: number;
+  lon: number;
+  name: string;
+  value: number;
+  mainStreet?: string;
+  sideStreet?: string;
+}
+
 export default function Dashboard() {
   const [displayMetric, setDisplayMetric] = useState("dailyTrafficVolume");
   const [perfMetrics, setPerfMetrics] = useState<MetricRow[]>([]);
   const [volMetrics, setVolMetrics] = useState<MetricRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [mapData, setMapData] = useState<any>(null);
   const [mapLoading, setMapLoading] = useState<boolean>(true);
-  const signals = useSelector((state: RootState) => state.metrics.signals);
-  const [metricData, setMetricData] = useState<MetricDataItem[]>([]);
-  console.log("use selector signals:", signals);
+  // const [metricData, setMetricData] = useState<MetricDataItem[]>([]);
+  // const [mapLayout, setMapLayout] = useState<any>({
+  //   autosize: true,
+  //   hovermode: "closest",
+  //   mapbox: {
+  //     style: "carto-positron",
+  //     center: { lat: 33.789, lon: -84.388 },
+  //     zoom: 15,
+  //     pitch: 0,
+  //     bearing: 0,
+  //     dragmode: "zoom",
+  //     accesstoken: "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
+  //   },
+  //   margin: { r: 0, t: 0, b: 0, l: 0 },
+  //   legend: {
+  //     x: 1,
+  //     xanchor: 'right',
+  //     y: 0.9,
+  //     bgcolor: 'rgba(255, 255, 255, 0.8)',
+  //     bordercolor: 'rgba(0, 0, 0, 0.1)',
+  //     borderwidth: 1
+  //   },
+  //   dragmode: "pan",
+  //   updatemenus: [
+  //     {
+  //       buttons: [
+  //         {
+  //           args: [{ "mapbox.zoom": 11, "mapbox.center.lat": 33.789, "mapbox.center.lon": -84.388 }],
+  //           label: "Reset View",
+  //           method: "relayout"
+  //         },
+  //         {
+  //           args: [{ "mapbox.pitch": 0, "mapbox.bearing": 0 }],
+  //           label: "2D View",
+  //           method: "relayout"
+  //         },
+  //         {
+  //           args: [{ "mapbox.pitch": 45, "mapbox.bearing": 0 }],
+  //           label: "3D View",
+  //           method: "relayout"
+  //         },
+  //         {
+  //           args: [{ "mapbox.bearing": 45 }],
+  //           label: "Rotate Right",
+  //           method: "relayout"
+  //         },
+  //         {
+  //           args: [{ "mapbox.bearing": -45 }],
+  //           label: "Rotate Left",
+  //           method: "relayout"
+  //         }
+  //       ],
+  //       direction: "left",
+  //       pad: { r: 10, t: 10 },
+  //       showactive: false,
+  //       type: "buttons",
+  //       x: 0.05,
+  //       y: 0.05,
+  //       xanchor: "left",
+  //       yanchor: "bottom"
+  //     }
+  //   ]
+  // });
+  const fetchedMapRef = useRef(false);
   
-  const dispatch = useDispatch<AppDispatch>();
+  // Use Redux state with useAppSelector
+  const dispatch = useAppDispatch();
+  const { 
+    signals, 
+    straightAverage, 
+    signalsFilterAverage,
+    loading: reduxLoading
+  } = useAppSelector((state: RootState) => state.metrics);
 
-  // Common filter parameters for all requests
-  const commonFilterParams: FilterParams = {
-    dateRange: 4,
-    timePeriod: 4,
-    customStart: null,
-    customEnd: null,
-    daysOfWeek: null,
-    startTime: null,
-    endTime: null,
-    zone_Group: "Central Metro",
-    zone: null,
-    agency: null,
-    county: null,
-    city: null,
-    corridor: null,
-    signalId: "",
-    priority: "",
-    classification: "",
-  };
+  console.log("signalsFilterAverage:", signalsFilterAverage);
+  
+  // Use combined loading state
+  const loading = reduxLoading || straightAverage.loading || signalsFilterAverage.loading;
+  // const loading = reduxLoading;
+
+  const commonFilterParams = useSelector(selectFilterParams);
+  const isFiltering = useSelector((state: RootState) => state.filter.isFiltering);
+  const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
 
   useEffect(() => {
     dispatch(fetchAllSignals());
@@ -233,239 +302,193 @@ export default function Dashboard() {
     return `${signalInfo}<br>${label}: ${value}`;
   }, [formatValue]);
 
-  // Fetch map data for the selected metric
-  const fetchMapData = useCallback(async (metricName: string) => {
-    setMapLoading(true);
-    try {      
-      const measure = displayMetricToMeasureMap[metricName];
-      const params: MetricsFilterRequest = {
-        source: "main",
-        measure,
-      };
+  useEffect(() => {
+    console.log("signalsFilterAverage:", signals.length > 0, signalsFilterAverage.data);
+    if (signals.length > 0 && signalsFilterAverage.data) {
+      // setMetricData(signalsFilterAverage.data);
       
-      console.log(`Fetching map data for ${metricName} (${measure})`);
+      // Get settings from mapSettings using the mapping
+      const settingsKey = metricToSettingsMap[displayMetric];
+      const settings = settingsKey ? mapSettings[settingsKey] : null;
       
-      // Fetch data from the API
-      const responseData = await metricsApi.getSignalsFilterAverage(params, commonFilterParams);
-      console.log("Map data response:", responseData);
-      
-      if (Array.isArray(responseData) && responseData.length > 0) {
-        setMetricData(responseData);
-        
-        // Get settings from mapSettings using the mapping
-        const settingsKey = metricToSettingsMap[metricName];
-        const settings = settingsKey ? mapSettings[settingsKey] : null;
-        
-        if (!settings) {
-          console.error(`No settings found for metric: ${metricName}`);
-          // setMapData(generateFallbackMapData());
-          setMapLoading(false);
-          return;
-        }
+      if (!settings) {
+        console.error(`No settings found for metric: ${displayMetric}`);
+        setMapLoading(false);
+        return;
+      }
 
-        console.log("Signals:", signals);
+      console.log("Signals:", signals);
+      
+      // Join signal data with metric data
+      const signalFilterData = signalsFilterAverage.data || [];
+      const joinedData = signals
+        .map(signal => {
+          const metricItem = signalFilterData.find((md: any) => md.label === signal.signalID);
+          if (metricItem) {
+            return {
+              ...signal,
+              [settings.field]: metricItem.avg
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      
+      // Create different traces for each range
+      const mapTraces = [];
+      
+      // First add the unavailable data trace so it appears at the top of the legend
+      const unavailableSignals = joinedData.filter((signal: any) => 
+        signal[settings.field] === undefined || signal[settings.field] === null || signal[settings.field] === -1
+      );
+      
+      if (unavailableSignals.length > 0) {
+        mapTraces.push({
+          type: "scattermapbox",
+          lat: unavailableSignals.map((signal: any) => signal.latitude),
+          lon: unavailableSignals.map((signal: any) => signal.longitude),
+          mode: "markers",
+          marker: {
+            color: settings.legendColors[0], // First color is for unavailable
+            size: 6,
+            opacity: 0.8,
+            symbol: "circle"
+          },
+          text: unavailableSignals.map((signal: any) => 
+            `${signal.signalID}<br>${signal.mainStreetName} @ ${signal.sideStreetName}<br>No data available`
+          ),
+          name: settings.legendLabels[0], // "Unavailable"
+          showlegend: true,
+          hoverinfo: "text"
+        });
+      }
+      
+      // Then add traces for each range of data
+      // Skip the first range which is for unavailable data [-1, -1]
+      for (let i = 1; i < settings.ranges.length; i++) {
+        const range = settings.ranges[i];
         
-        // Join signal data with metric data
-        const joinedData = signals
-          .map(signal => {
-            const metricItem = responseData.find(md => md.label === signal.signalID);
-            if (metricItem) {
-              return {
-                ...signal,
-                [settings.field]: metricItem.avg
-              };
-            }
-            return null;
-          })
-          .filter(Boolean);
-        
-        // Create different traces for each range
-        const mapTraces = [];
-        
-        // First add the unavailable data trace so it appears at the top of the legend
-        const unavailableSignals = joinedData.filter((signal: any) => 
-          signal[settings.field] === undefined || signal[settings.field] === null || signal[settings.field] === -1
+        // Filter signals in this range
+        const rangeSignals = joinedData.filter((signal: any) => 
+          signal[settings.field] >= range[0] && signal[settings.field] <= range[1]
         );
+        console.log("Range signals:", joinedData);
         
-        if (unavailableSignals.length > 0) {
+        if (rangeSignals.length > 0) {
+          // Create a single trace for this range of signals
           mapTraces.push({
             type: "scattermapbox",
-            lat: unavailableSignals.map((signal: any) => signal.latitude),
-            lon: unavailableSignals.map((signal: any) => signal.longitude),
+            lat: rangeSignals.map((signal: any) => signal.latitude),
+            lon: rangeSignals.map((signal: any) => signal.longitude),
             mode: "markers",
             marker: {
-              color: settings.legendColors[0], // First color is for unavailable
-              size: 10,
+              color: settings.legendColors[i], // Use i to match the range index
+              size: 6,
               opacity: 0.8,
               symbol: "circle"
             },
-            text: unavailableSignals.map((signal: any) => 
-              `${signal.signalID}<br>${signal.mainStreetName} @ ${signal.sideStreetName}<br>No data available`
+            text: rangeSignals.map((signal: any) => 
+              generateTooltipText(
+                signal, 
+                settings.field, 
+                settings.label, 
+                settings.formatType, 
+                settings.formatDecimals
+              )
             ),
-            name: settings.legendLabels[0], // "Unavailable"
+            name: settings.legendLabels[i], // Use i to match the range index
             showlegend: true,
             hoverinfo: "text"
           });
         }
-        
-        // Then add traces for each range of data
-        // Skip the first range which is for unavailable data [-1, -1]
-        for (let i = 1; i < settings.ranges.length; i++) {
-          const range = settings.ranges[i];
-          
-          // Filter signals in this range
-          const rangeSignals = joinedData.filter((signal: any) => 
-            signal[settings.field] >= range[0] && signal[settings.field] <= range[1]
-          );
-          console.log("Range signals:", joinedData);
-          
-          if (rangeSignals.length > 0) {
-            // Create a single trace for this range of signals
-            mapTraces.push({
-              type: "scattermapbox",
-              lat: rangeSignals.map((signal: any) => signal.latitude),
-              lon: rangeSignals.map((signal: any) => signal.longitude),
-              mode: "markers",
-              marker: {
-                color: settings.legendColors[i], // Use i to match the range index
-                size: 10,
-                opacity: 0.8,
-                symbol: "circle"
-              },
-              text: rangeSignals.map((signal: any) => 
-                generateTooltipText(
-                  signal, 
-                  settings.field, 
-                  settings.label, 
-                  settings.formatType, 
-                  settings.formatDecimals
-                )
-              ),
-              name: settings.legendLabels[i], // Use i to match the range index
-              showlegend: true,
-              hoverinfo: "text"
-            });
-          }
-        }
-        
-        // Calculate map center and zoom
-        const centerLat = calculateAverage(joinedData, 'latitude');
-        const centerLon = calculateAverage(joinedData, 'longitude');
-        const zoom = calculateZoom(joinedData);
-        
-        // Create layout with proper center and zoom
-        const mapLayout = {
-          autosize: true,
-          hovermode: "closest",
-          mapbox: {
-            style: "carto-positron",
-            center: { lat: centerLat, lon: centerLon },
-            zoom: zoom,
-            pitch: 45, // Tilt view for 3D effect
-            bearing: 0,
-            dragmode: "zoom",
-            accesstoken: "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
-          },
-          margin: { r: 0, t: 0, b: 0, l: 0 },
-          legend: {
-            x: 1,
-            xanchor: 'right',
-            y: 0.9,
-            bgcolor: 'rgba(255, 255, 255, 0.8)',
-            bordercolor: 'rgba(0, 0, 0, 0.1)',
-            borderwidth: 1
-          },
-          dragmode: "pan",
-          updatemenus: [
-            {
-              buttons: [
-                {
-                  args: [{ "mapbox.zoom": 11, "mapbox.center.lat": centerLat, "mapbox.center.lon": centerLon }],
-                  label: "Reset View",
-                  method: "relayout"
-                },
-                {
-                  args: [{ "mapbox.pitch": 0, "mapbox.bearing": 0 }],
-                  label: "2D View",
-                  method: "relayout"
-                },
-                {
-                  args: [{ "mapbox.pitch": 45, "mapbox.bearing": 0 }],
-                  label: "3D View",
-                  method: "relayout"
-                },
-                {
-                  args: [{ "mapbox.bearing": 45 }],
-                  label: "Rotate Right",
-                  method: "relayout"
-                },
-                {
-                  args: [{ "mapbox.bearing": -45 }],
-                  label: "Rotate Left",
-                  method: "relayout"
-                }
-              ],
-              direction: "left",
-              pad: { r: 10, t: 10 },
-              showactive: false,
-              type: "buttons",
-              x: 0.05,
-              y: 0.05,
-              xanchor: "left",
-              yanchor: "bottom"
-            }
-          ]
-        };
-        console.log("Map traces:", mapTraces);
-        setMapData(mapTraces);
-        setMapLayout(mapLayout);
-      } else {
-        console.error("Invalid map data response:", responseData);
-        // setMapData(generateFallbackMapData());
       }
-    } catch (error) {
-      console.error("Error fetching map data:", error);
-      // setMapData(generateFallbackMapData());
-    } finally {
-      setMapLoading(false);
+      
+      // Calculate map center and zoom
+      const centerLat = calculateAverage(joinedData, 'latitude');
+      const centerLon = calculateAverage(joinedData, 'longitude');
+      const zoom = calculateZoom(joinedData);
+      
+      // Create layout with proper center and zoom
+      const mapLayout = {
+        autosize: true,
+        hovermode: "closest",
+        mapbox: {
+          style: "carto-positron",
+          center: { lat: centerLat, lon: centerLon },
+          zoom: zoom,
+          pitch: 45, // Tilt view for 3D effect
+          bearing: 0,
+          dragmode: "zoom",
+          accesstoken: "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
+        },
+        margin: { r: 0, t: 0, b: 0, l: 0 },
+        legend: {
+          x: 1,
+          xanchor: 'right',
+          y: 0.9,
+          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          bordercolor: 'rgba(0, 0, 0, 0.1)',
+          borderwidth: 1
+        },
+        dragmode: "pan",
+        updatemenus: [
+          {
+            buttons: [
+              {
+                args: [{ "mapbox.zoom": 11, "mapbox.center.lat": centerLat, "mapbox.center.lon": centerLon }],
+                label: "Reset View",
+                method: "relayout"
+              },
+              {
+                args: [{ "mapbox.pitch": 0, "mapbox.bearing": 0 }],
+                label: "2D View",
+                method: "relayout"
+              },
+              {
+                args: [{ "mapbox.pitch": 45, "mapbox.bearing": 0 }],
+                label: "3D View",
+                method: "relayout"
+              },
+              {
+                args: [{ "mapbox.bearing": 45 }],
+                label: "Rotate Right",
+                method: "relayout"
+              },
+              {
+                args: [{ "mapbox.bearing": -45 }],
+                label: "Rotate Left",
+                method: "relayout"
+              }
+            ],
+            direction: "left",
+            pad: { r: 10, t: 10 },
+            showactive: false,
+            type: "buttons",
+            x: 0.05,
+            y: 0.05,
+            xanchor: "left",
+            yanchor: "bottom"
+          }
+        ]
+      };
+      console.log("Map traces:", mapTraces);
+      setMapData(mapTraces);
+      // setMapLayout(mapLayout);
+    } else {
+      console.error("Invalid map data response:", signalsFilterAverage.data);
     }
-  }, [signals, calculateAverage, calculateZoom, generateTooltipText, commonFilterParams, displayMetricToMeasureMap]);
-
-  // Generate fallback map data if API fails
-  const generateFallbackMapData = () => {
-    return [{
-      type: "scattermapbox",
-      lat: [
-        33.749, 33.759, 33.769, 33.779, 33.789, 33.799, 33.809, 33.819, 33.829, 33.839,
-      ],
-      lon: [
-        -84.388, -84.398, -84.408, -84.418, -84.428, -84.378, -84.368, -84.358, -84.348, -84.338,
-      ],
-      mode: "markers",
-      marker: {
-        size: 8,
-        color: "#3b82f6",
-        opacity: 0.8,
-      },
-      text: Array(10).fill("No data available"),
-      name: "No data",
-      showlegend: true,
-      hoverinfo: "text",
-    }];
-  };
+  }, [signals, signalsFilterAverage]);
 
   // Handle metric selection change
   const handleDisplayMetricChange = (newMetric: string) => {
+    // fetchedMapRef.current = false;
     setDisplayMetric(newMetric);
-    fetchMapData(newMetric);
   };
 
-  // Fetch data when component mounts
+  // Fetch data when component mounts or when filters are applied
   useEffect(() => {    
     const fetchData = async () => {
-      setLoading(true);
-      
-      try {        
+      try {
         // Fetch performance metrics
         const perfMetricsData = await Promise.all(
           performanceMetricCodes.map(async (measure) => {
@@ -475,26 +498,27 @@ export default function Dashboard() {
             };
             
             try {
-              // The API response might be a number directly or have an avg property
-              const response = await metricsApi.getStraightAverage(params, commonFilterParams);
+              // Dispatch the action to fetch straight average
+              await dispatch(fetchStraightAverage({ params, filterParams: commonFilterParams }));
               
-              // Debug: Log the response to understand its structure
-              console.log(`Response for ${measure}:`, response);
+              // Get the most current state AFTER the dispatch completes
+              const stateAfterDispatch = store.getState();
+              const straightAverageData = stateAfterDispatch.metrics.straightAverage.data;
               
               let value: number;
               
               // Check the response structure
-              if (typeof response === 'number') {
-                value = response;
-              } else if (response && typeof response === 'object') {
-                if ('avg' in response) {
-                  value = (response as any).avg;
+              if (straightAverageData !== null) {
+                if (typeof straightAverageData === 'number') {
+                  value = straightAverageData;
+                } else if (typeof straightAverageData === 'object' && 'avg' in straightAverageData) {
+                  value = (straightAverageData as any).avg;
                 } else {
-                  console.error(`Unexpected response structure for ${measure}:`, response);
+                  console.error(`Unexpected response structure for ${measure}:`, straightAverageData);
                   value = NaN;
                 }
               } else {
-                console.error(`Invalid response for ${measure}:`, response);
+                console.error(`Invalid response for ${measure}:`, straightAverageData);
                 value = NaN;
               }
                 
@@ -506,61 +530,9 @@ export default function Dashboard() {
               };
             } catch (error) {
               console.error(`Error fetching ${measure}:`, error);
-              // Return a default value in case of error
               return {
                 label: metricLabels[measure],
-                value: "N/A",
-                unit: getMetricUnit(measure),
-                measure,
-              };
-            }
-          })
-        );
-        
-        // Fetch volume metrics
-        const volMetricsData = await Promise.all(
-          volumeMetricCodes.map(async (measure) => {
-            const params: MetricsFilterRequest = {
-              source: "main",
-              measure,
-            };
-            
-            try {
-              // The API response might be a number directly or have an avg property
-              const response = await metricsApi.getStraightAverage(params, commonFilterParams);
-              
-              // Debug: Log the response to understand its structure
-              console.log(`Response for ${measure}:`, response);
-              
-              let value: number;
-              
-              // Check the response structure
-              if (typeof response === 'number') {
-                value = response;
-              } else if (response && typeof response === 'object') {
-                if ('avg' in response) {
-                  value = (response as any).avg;
-                } else {
-                  console.error(`Unexpected response structure for ${measure}:`, response);
-                  value = NaN;
-                }
-              } else {
-                console.error(`Invalid response for ${measure}:`, response);
-                value = NaN;
-              }
-                
-              return {
-                label: metricLabels[measure],
-                value: formatMetricValue(value, measure),
-                unit: getMetricUnit(measure),
-                measure,
-              };
-            } catch (error) {
-              console.error(`Error fetching ${measure}:`, error);
-              // Return a default value in case of error
-              return {
-                label: metricLabels[measure],
-                value: "N/A",
+                value: 'N/A',
                 unit: getMetricUnit(measure),
                 measure,
               };
@@ -569,117 +541,94 @@ export default function Dashboard() {
         );
         
         setPerfMetrics(perfMetricsData);
+        
+        // Similar approach for volume metrics
+        const volMetricsData = await Promise.all(
+          volumeMetricCodes.map(async (measure) => {
+            const params: MetricsFilterRequest = {
+              source: "main",
+              measure,
+            };
+            
+            try {
+              await dispatch(fetchStraightAverage({ params, filterParams: commonFilterParams }));
+              
+              // Get the most current state AFTER the dispatch completes
+              const stateAfterDispatch = store.getState();
+              const straightAverageData = stateAfterDispatch.metrics.straightAverage.data;
+              
+              let value: number;
+              
+              if (straightAverageData !== null) {
+                if (typeof straightAverageData === 'number') {
+                  value = straightAverageData;
+                } else if (typeof straightAverageData === 'object' && 'avg' in straightAverageData) {
+                  value = (straightAverageData as any).avg;
+                } else {
+                  console.error(`Unexpected response structure for ${measure}:`, straightAverageData);
+                  value = NaN;
+                }
+              } else {
+                console.error(`Invalid response for ${measure}:`, straightAverageData);
+                value = NaN;
+              }
+                
+              return {
+                label: metricLabels[measure],
+                value: formatMetricValue(value, measure),
+                unit: getMetricUnit(measure),
+                measure,
+              };
+            } catch (error) {
+              console.error(`Error fetching ${measure}:`, error);
+              return {
+                label: metricLabels[measure],
+                value: 'N/A',
+                unit: getMetricUnit(measure),
+                measure,
+              };
+            }
+          })
+        );
+        
         setVolMetrics(volMetricsData);
         
-        // Don't try to fetch map data here - we'll do it in another effect when signals are available
       } catch (error) {
         console.error("Error fetching metrics data:", error);
-        // Fall back to dummy data if API calls fail
-        setPerfMetrics([
-          { label: "Throughput", value: "1,235", unit: "vph", measure: "tp" },
-          { label: "Arrivals on Green", value: "69.9", unit: "%", measure: "aogd" },
-          { label: "Progression Ratio", value: "1.07", unit: "", measure: "prd" },
-          { label: "Queue Spillback Ratio", value: "17.5", unit: "%", measure: "qsd" },
-          { label: "Peak Period Split Failures", value: "8.3", unit: "%", measure: "sfd" },
-          { label: "Off Peak Split Failures", value: "4.7", unit: "%", measure: "sfo" },
-          { label: "Travel Time Index", value: "1.31", unit: "", measure: "tti" },
-          { label: "Planning Time Index", value: "1.42", unit: "", measure: "pti" },
-        ]);
-        
-        setVolMetrics([
-          { label: "Traffic Volume", value: "16,863", unit: "vpd", measure: "vpd" },
-          { label: "AM Peak Volume", value: "886", unit: "vph", measure: "vphpa" },
-          { label: "PM Peak Volume", value: "1,156", unit: "vph", measure: "vphpp" },
-          { label: "Pedestrian Activations", value: "225", unit: "", measure: "papd" },
-          { label: "Vehicle Detector Uptime", value: "99.9%", unit: "%", measure: "du" },
-          { label: "Pedestrian Detector Uptime", value: "99.9%", unit: "%", measure: "pau" },
-          { label: "CCTV Uptime", value: "99.9%", unit: "%", measure: "cctv" },
-          { label: "Communications Uptime", value: "99.9%", unit: "%", measure: "cu" },
-        ]);
-        
-        // Set fallback map data
-        // setMapData(generateFallbackMapData());
-      } finally {
-        setLoading(false);
       }
     };
     
     fetchData();
-  }, [dispatch, displayMetric]);
+  }, [filtersApplied]);
 
   // Add a separate effect to fetch map data when signals become available
   useEffect(() => {
-    // Only fetch map data if signals data is available
-    if (signals && signals.length > 0) {
-      console.log("Signals data available, fetching map data...", signals.length);
-      fetchMapData(displayMetric);
-    } else {
-      console.log("Waiting for signals data before fetching map data...");
-    }
-  }, [signals, displayMetric]);
+    console.log("values changed:", displayMetric, fetchedMapRef.current);
 
-  const [mapLayout, setMapLayout] = useState<any>({
-    autosize: true,
-    hovermode: "closest",
-    mapbox: {
-      style: "carto-positron",
-      center: { lat: 33.789, lon: -84.388 },
-      zoom: 15,
-      pitch: 0,
-      bearing: 0,
-      dragmode: "zoom",
-      accesstoken: "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
-    },
-    margin: { r: 0, t: 0, b: 0, l: 0 },
-    legend: {
-      x: 1,
-      xanchor: 'right',
-      y: 0.9,
-      bgcolor: 'rgba(255, 255, 255, 0.8)',
-      bordercolor: 'rgba(0, 0, 0, 0.1)',
-      borderwidth: 1
-    },
-    dragmode: "pan",
-    updatemenus: [
-      {
-        buttons: [
-          {
-            args: [{ "mapbox.zoom": 11, "mapbox.center.lat": 33.789, "mapbox.center.lon": -84.388 }],
-            label: "Reset View",
-            method: "relayout"
-          },
-          {
-            args: [{ "mapbox.pitch": 0, "mapbox.bearing": 0 }],
-            label: "2D View",
-            method: "relayout"
-          },
-          {
-            args: [{ "mapbox.pitch": 45, "mapbox.bearing": 0 }],
-            label: "3D View",
-            method: "relayout"
-          },
-          {
-            args: [{ "mapbox.bearing": 45 }],
-            label: "Rotate Right",
-            method: "relayout"
-          },
-          {
-            args: [{ "mapbox.bearing": -45 }],
-            label: "Rotate Left",
-            method: "relayout"
-          }
-        ],
-        direction: "left",
-        pad: { r: 10, t: 10 },
-        showactive: false,
-        type: "buttons",
-        x: 0.05,
-        y: 0.05,
-        xanchor: "left",
-        yanchor: "bottom"
+    // Fetch map data for selected metric
+    const fetchMapData = async () => {
+      setMapLoading(true);
+      try {      
+        const measure = displayMetricToMeasureMap[displayMetric];
+        const params: MetricsFilterRequest = {
+          source: "main",
+          measure,
+        };
+        
+        console.log(`Fetching map data for ${displayMetric} (${measure})`);
+        
+        // Dispatch the action to fetch signal metrics
+        await dispatch(fetchSignalsFilterAverage({ params, filterParams: commonFilterParams }));
+      } catch (error) {
+        console.error("Error fetching map data:", error);
+      } finally {
+        setMapLoading(false);
       }
-    ]
-  });
+    };
+
+    fetchMapData();
+      // fetchedMapRef.current = true;
+  }, [displayMetric, filtersApplied]);
 
   // Return JSX
   return (

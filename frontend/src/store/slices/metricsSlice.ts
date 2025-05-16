@@ -7,7 +7,7 @@ import {
     FetchMetricsParams,
     healthMetricsApi 
 } from '../../services/healthMetricsApi';
-import { FilterParams } from '../../types/api.types';
+import { FilterParams, MetricData, MetricsFilterRequest } from '../../types/api.types';
 import { metricsApi } from '../../services/api/metricsApi';
 
 export interface TrendDataPoint {
@@ -90,6 +90,27 @@ interface MetricsState {
         loading: boolean;
         error: string | null;
     };
+    // New state properties for API calls
+    metricsFilter: {
+        data: MetricData[] | null;
+        loading: boolean;
+        error: string | null;
+    };
+    metricsAverage: {
+        data: number | null;
+        loading: boolean;
+        error: string | null;
+    };
+    straightAverage: {
+        data: number | null;
+        loading: boolean;
+        error: string | null;
+    };
+    signalsFilterAverage: {
+        data: any[] | null;
+        loading: boolean;
+        error: string | null;
+    };
 }
 
 const initialState: MetricsState = {
@@ -128,6 +149,27 @@ const initialState: MetricsState = {
         loading: false,
         error: null
     },
+    // Initialize new state properties
+    metricsFilter: {
+        data: null,
+        loading: false,
+        error: null
+    },
+    metricsAverage: {
+        data: null,
+        loading: false,
+        error: null
+    },
+    straightAverage: {
+        data: null,
+        loading: false,
+        error: null
+    },
+    signalsFilterAverage: {
+        data: null,
+        loading: false,
+        error: null
+    }
 };
 
 // Add fetchAllSignals thunk
@@ -283,6 +325,74 @@ export const fetchSummaryTrends = createAsyncThunk<
     }
 );
 
+// New thunk for getMetricsFilter
+export const fetchMetricsFilter = createAsyncThunk<
+    MetricData[],
+    { params: MetricsFilterRequest, filterParams: FilterParams },
+    { rejectValue: string }
+>(
+    'metrics/fetchMetricsFilter',
+    async ({ params, filterParams }, { rejectWithValue }) => {
+        try {
+            const data = await metricsApi.getMetricsFilter(params, filterParams);
+            return data;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Failed to fetch metrics filter');
+        }
+    }
+);
+
+// New thunk for getMetricsAverage
+export const fetchMetricsAverage = createAsyncThunk<
+    number,
+    { params: MetricsFilterRequest, filterParams: FilterParams },
+    { rejectValue: string }
+>(
+    'metrics/fetchMetricsAverage',
+    async ({ params, filterParams }, { rejectWithValue }) => {
+        try {
+            const data = await metricsApi.getMetricsAverage(params, filterParams);
+            return data;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Failed to fetch metrics average');
+        }
+    }
+);
+
+// New thunk for getStraightAverage
+export const fetchStraightAverage = createAsyncThunk<
+    number,
+    { params: MetricsFilterRequest, filterParams: FilterParams },
+    { rejectValue: string }
+>(
+    'metrics/fetchStraightAverage',
+    async ({ params, filterParams }, { rejectWithValue }) => {
+        try {
+            const data = await metricsApi.getStraightAverage(params, filterParams);
+            return data;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Failed to fetch straight average');
+        }
+    }
+);
+
+// New thunk for getSignalsFilterAverage
+export const fetchSignalsFilterAverage = createAsyncThunk<
+    any[],
+    { params: MetricsFilterRequest, filterParams: FilterParams },
+    { rejectValue: string }
+>(
+    'metrics/fetchSignalsFilterAverage',
+    async ({ params, filterParams }, { rejectWithValue }) => {
+        try {
+            const data = await metricsApi.getSignalsFilterAverage(params, filterParams);
+            return data;
+        } catch (error: any) {
+            return rejectWithValue(error.message || 'Failed to fetch signals filter average');
+        }
+    }
+);
+
 const metricsSlice = createSlice({
     name: 'metrics',
     initialState,
@@ -389,6 +499,63 @@ const metricsSlice = createSlice({
         builder.addCase(fetchSummaryTrends.rejected, (state, action) => {
             state.summaryTrends.loading = false;
             state.summaryTrends.error = action.payload as string;
+        });
+
+        // Metrics Filter
+        builder.addCase(fetchMetricsFilter.pending, (state) => {
+            state.metricsFilter.loading = true;
+            state.metricsFilter.error = null;
+        });
+        builder.addCase(fetchMetricsFilter.fulfilled, (state, action) => {
+            state.metricsFilter.loading = false;
+            state.metricsFilter.data = action.payload;
+        });
+        builder.addCase(fetchMetricsFilter.rejected, (state, action) => {
+            state.metricsFilter.loading = false;
+            state.metricsFilter.error = action.payload as string;
+        });
+
+        // Metrics Average
+        builder.addCase(fetchMetricsAverage.pending, (state) => {
+            state.metricsAverage.loading = true;
+            state.metricsAverage.error = null;
+        });
+        builder.addCase(fetchMetricsAverage.fulfilled, (state, action) => {
+            state.metricsAverage.loading = false;
+            state.metricsAverage.data = action.payload;
+        });
+        builder.addCase(fetchMetricsAverage.rejected, (state, action) => {
+            state.metricsAverage.loading = false;
+            state.metricsAverage.error = action.payload as string;
+        });
+
+        // Straight Average
+        builder.addCase(fetchStraightAverage.pending, (state) => {
+            state.straightAverage.loading = true;
+            state.straightAverage.error = null;
+        });
+        builder.addCase(fetchStraightAverage.fulfilled, (state, action) => {
+            state.straightAverage.loading = false;
+            state.straightAverage.data = action.payload;
+        });
+        builder.addCase(fetchStraightAverage.rejected, (state, action) => {
+            state.straightAverage.loading = false;
+            state.straightAverage.error = action.payload as string;
+        });
+
+        // Signals Filter Average
+        builder.addCase(fetchSignalsFilterAverage.pending, (state) => {
+            state.signalsFilterAverage.loading = true;
+            state.signalsFilterAverage.error = null;
+        });
+        builder.addCase(fetchSignalsFilterAverage.fulfilled, (state, action) => {
+            state.signalsFilterAverage.loading = false;
+            console.log("action.payload:", action.payload);
+            state.signalsFilterAverage.data = action.payload;
+        });
+        builder.addCase(fetchSignalsFilterAverage.rejected, (state, action) => {
+            state.signalsFilterAverage.loading = false;
+            state.signalsFilterAverage.error = action.payload as string;
         });
     }
 });

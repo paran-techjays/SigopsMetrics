@@ -17,6 +17,16 @@ import Plot from "react-plotly.js"
 import MapBox from "../../components/MapBox"
 import { metricApiKeys } from "../../services/api"
 import mapSettings from "../../utils/mapSettings"
+import AppConfig from '../../utils/appConfig'
+import { useAppDispatch, useAppSelector } from '../../hooks/useTypedSelector'
+import { 
+  fetchStraightAverage,
+  fetchAllSignals,
+  fetchMetricsFilter,
+  fetchMetricsAverage,
+  fetchSignalsFilterAverage
+} from '../../store/slices/metricsSlice'
+import { MetricsFilterRequest } from '../../types/api.types'
 
 // Define the available metrics
 const metrics = [
@@ -28,7 +38,7 @@ const metrics = [
 ]
 
 // Base API URL
-const API_BASE_URL = "https://sigopsmetrics-api.dot.ga.gov";
+const API_BASE_URL = AppConfig.settings.API_PATH;
 
 // Default filter payload
 const defaultPayload = {
@@ -111,15 +121,28 @@ export default function Maintenance() {
   // State for selected metric
   const [selectedMetric, setSelectedMetric] = useState("detectorUptime");
   const [selectedMetricKey, setSelectedMetricKey] = useState("du");
-
-  // State for data
-  const [loading, setLoading] = useState(true);
-  const [metricData, setMetricData] = useState<MetricData | null>(null);
-  const [signals, setSignals] = useState<Signal[]>([]);
-  const [signalMetrics, setSignalMetrics] = useState<{ [key: string]: number }>({});
+  
+  // Local state for component-specific data
   const [locationMetrics, setLocationMetrics] = useState<LocationMetric[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
   const [mapData, setMapData] = useState<MapPoint[]>([]);
+
+  // Redux state
+  const dispatch = useAppDispatch();
+  const { 
+    signals,
+    straightAverage,
+    metricsFilter,
+    metricsAverage,
+    signalsFilterAverage
+  } = useAppSelector(state => state.metrics);
+  
+  const loading = straightAverage.loading || 
+                  metricsFilter.loading || 
+                  metricsAverage.loading || 
+                  signalsFilterAverage.loading;
+  
+  const metricData = straightAverage.data;
   
   // Find the metric key for the selected metric
   useEffect(() => {
@@ -132,65 +155,63 @@ export default function Maintenance() {
   // Fetch data when selected metric changes
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
       try {
-        // Fetch metric straight average
-        const straightAverageUrl = `${API_BASE_URL}/metrics/straightaverage?source=main&measure=${selectedMetricKey}`;
-        const straightAverageResponse = await axios.post(straightAverageUrl, defaultPayload);
-        setMetricData(straightAverageResponse.data);
+        // Create common params object
+        const params: MetricsFilterRequest = {
+          source: "main",
+          measure: selectedMetricKey
+        };
         
-        // Fetch all signals
-        const signalsUrl = `${API_BASE_URL}/signals/all`;
-        const signalsResponse = await axios.get(signalsUrl);
-        setSignals(signalsResponse.data);
-        
-        // Fetch signal metrics
-        const signalMetricsUrl = `${API_BASE_URL}/metrics/signals/filter/average?source=main&measure=${selectedMetricKey}`;
-        const signalMetricsResponse = await axios.post(signalMetricsUrl, defaultPayload);
-        
-        // Create a map of signal IDs to metric values
-        const metricsMap: { [key: string]: number } = {};
-        signalMetricsResponse.data.forEach((item: any) => {
-          metricsMap[item.label] = item.avg;
-        });
-        setSignalMetrics(metricsMap);
-        
-        // Prepare map data
-        const mapPointsData = signalsResponse.data
-          .filter((signal: Signal) => signal.latitude && signal.longitude)
-          .map((signal: Signal) => ({
-            signalID: signal.signalID,
-            lat: signal.latitude,
-            lon: signal.longitude,
-            name: `${signal.mainStreetName || ''} ${signal.sideStreetName ? '@ ' + signal.sideStreetName : ''}`,
-            value: metricsMap[signal.signalID] || 0
-          }));
-        setMapData(mapPointsData);
-        
-        // Fetch location metrics
-        const locationMetricsUrl = `${API_BASE_URL}/metrics/average?source=main&measure=${selectedMetricKey}&dashboard=false`;
-        const locationMetricsResponse = await axios.post(locationMetricsUrl, defaultPayload);
-        setLocationMetrics(locationMetricsResponse.data);
-        
-        // Fetch time series data
-        const timeSeriesUrl = `${API_BASE_URL}/metrics/filter?source=main&measure=${selectedMetricKey}`;
-        const timeSeriesResponse = await axios.post(timeSeriesUrl, defaultPayload);
-        setTimeSeriesData(timeSeriesResponse.data);
-        
+        // Dispatch actions to fetch data
+        dispatch(fetchStraightAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchAllSignals());
+        dispatch(fetchSignalsFilterAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchMetricsAverage({ 
+          params: { ...params, dashboard: false }, 
+          filterParams: defaultPayload 
+        }));
+        dispatch(fetchMetricsFilter({ params, filterParams: defaultPayload }));
       } catch (error) {
-        console.error("Error fetching data:", error);
-        // Set empty data on error
-        setMetricData(null);
-        setLocationMetrics([]);
-        setTimeSeriesData([]);
-        setMapData([]);
-      } finally {
-        setLoading(false);
+        console.error("Error dispatching Redux actions:", error);
       }
     };
 
     fetchData();
-  }, [selectedMetricKey]);
+  }, [selectedMetricKey, dispatch]);
+
+  // Process data when Redux state changes
+  useEffect(() => {
+    // Process signal metrics when available
+    if (signals.length > 0 && signalsFilterAverage.data) {
+      // Create a map of signal IDs to metric values
+      const metricsMap: { [key: string]: number } = {};
+      signalsFilterAverage.data.forEach((item: any) => {
+        metricsMap[item.label] = item.avg;
+      });
+      
+      // Prepare map data
+      const mapPointsData = signals
+        .filter((signal) => signal.latitude && signal.longitude)
+        .map((signal) => ({
+          signalID: signal.signalID || '',
+          lat: signal.latitude,
+          lon: signal.longitude,
+          name: `${signal.mainStreetName || ''} ${signal.sideStreetName ? '@ ' + signal.sideStreetName : ''}`,
+          value: metricsMap[signal.signalID || ''] || 0
+        }));
+      setMapData(mapPointsData);
+    }
+    
+    // Set location metrics when available
+    if (metricsAverage.data) {
+      setLocationMetrics(metricsAverage.data as any);
+    }
+    
+    // Set time series data when available
+    if (metricsFilter.data) {
+      setTimeSeriesData(metricsFilter.data as any);
+    }
+  }, [signals, signalsFilterAverage.data, metricsAverage.data, metricsFilter.data]);
 
   // Handle metric tab change
   const handleMetricChange = (event: React.SyntheticEvent, newValue: string) => {

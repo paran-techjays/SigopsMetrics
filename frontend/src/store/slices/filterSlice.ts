@@ -1,5 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import filterApi from '../../services/api/filterApi';
+import { RootState } from '../../store';
+import { FilterParams } from '../../types/api.types';
 
 export interface FilterState {
   // Filter selections
@@ -42,6 +44,9 @@ export interface FilterState {
   
   // Is filtering active
   isFiltering: boolean;
+  
+  // Filters have been applied
+  filtersApplied: boolean;
 }
 
 const initialState: FilterState = {
@@ -93,6 +98,9 @@ const initialState: FilterState = {
   
   // Is filtering active
   isFiltering: false,
+  
+  // Filters have been applied
+  filtersApplied: false,
 };
 
 // Async thunks for API calls
@@ -366,6 +374,10 @@ const filterSlice = createSlice({
       console.log(`Setting isFiltering to: ${action.payload}`);
       state.isFiltering = action.payload;
     },
+    setFiltersApplied: (state, action: PayloadAction<boolean>) => {
+      console.log(`Setting filtersApplied to: ${action.payload}`);
+      state.filtersApplied = action.payload;
+    },
     // Reset all filters to default values
     resetFilters: (state) => {
       console.log('Resetting all filters to defaults');
@@ -391,6 +403,9 @@ const filterSlice = createSlice({
       // Reset isFiltering to false when filters are reset
       // This matches the Angular behavior
       state.isFiltering = false;
+      
+      // Reset filtersApplied when filters are reset
+      state.filtersApplied = true;
     },
     // Save filters as default in local storage
     saveAsDefaults: (state) => {
@@ -419,6 +434,9 @@ const filterSlice = createSlice({
       // Set isFiltering to false when saving defaults
       // This matches the Angular behavior where filter changes are "applied" when saving defaults
       state.isFiltering = false;
+      
+      // Set filtersApplied to true to trigger data refresh
+      state.filtersApplied = true;
     },
     // Load saved filters from local storage
     loadSavedFilters: (state) => {
@@ -641,9 +659,32 @@ export const {
   setClassification,
   setErrorState,
   setIsFiltering,
+  setFiltersApplied,
   resetFilters,
   saveAsDefaults,
   loadSavedFilters,
 } = filterSlice.actions;
 
-export default filterSlice.reducer; 
+export default filterSlice.reducer;
+
+export const selectFilterParams = (state: RootState): FilterParams => {
+  const filter = state.filter;
+  return {
+    dateRange: parseInt(filter.selectedDateOption),
+    timePeriod: parseInt(filter.selectedAggregationOption),
+    customStart: filter.startDate,
+    customEnd: filter.endDate,
+    daysOfWeek: null, // Add if needed
+    startTime: filter.allDayChecked ? null : filter.startTime,
+    endTime: filter.allDayChecked ? null : filter.endTime,
+    zone_Group: filter.selectedSignalGroup,
+    zone: filter.selectedDistrict || null,
+    agency: filter.selectedAgency || null,
+    county: filter.selectedCounty || null,
+    city: filter.selectedCity || null,
+    corridor: filter.selectedCorridor || null,
+    signalId: filter.signalId,
+    priority: filter.selectedPriority,
+    classification: filter.selectedClassification
+  };
+}; 

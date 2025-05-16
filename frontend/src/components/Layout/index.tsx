@@ -11,7 +11,7 @@ import FilterSidebar from "../FilterSidebar"
 import IconButton from "@mui/material/IconButton"
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
-const expandedDrawerWidth = 240
+const expandedDrawerWidth = 200
 const collapsedDrawerWidth = 65
 const filterWidth = 300
 

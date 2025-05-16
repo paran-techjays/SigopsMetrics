@@ -159,7 +159,7 @@ export const fetchLocationMetrics = async (metric: string, region: string): Prom
     return data.map((item: any) => ({
       location: item.label,
       value: item.avg || 0
-    })).sort((a: LocationMetric, b: LocationMetric) => b.value - a.value);
+    })).sort((a: LocationMetric, b: LocationMetric) => a.value - b.value);
   } catch (error) {
     console.error('Error fetching location metrics:', error);
     return [];

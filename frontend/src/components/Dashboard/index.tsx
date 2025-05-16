@@ -295,7 +295,7 @@ export default function Dashboard() {
             mode: "markers",
             marker: {
               color: settings.legendColors[0], // First color is for unavailable
-              size: 10,
+              size: 6,
               opacity: 0.8,
               symbol: "circle"
             },
@@ -328,7 +328,7 @@ export default function Dashboard() {
               mode: "markers",
               marker: {
                 color: settings.legendColors[i], // Use i to match the range index
-                size: 10,
+                size: 6,
                 opacity: 0.8,
                 symbol: "circle"
               },
@@ -430,29 +430,6 @@ export default function Dashboard() {
       setMapLoading(false);
     }
   }, [signals, calculateAverage, calculateZoom, generateTooltipText, commonFilterParams, displayMetricToMeasureMap]);
-
-  // Generate fallback map data if API fails
-  const generateFallbackMapData = () => {
-    return [{
-      type: "scattermapbox",
-      lat: [
-        33.749, 33.759, 33.769, 33.779, 33.789, 33.799, 33.809, 33.819, 33.829, 33.839,
-      ],
-      lon: [
-        -84.388, -84.398, -84.408, -84.418, -84.428, -84.378, -84.368, -84.358, -84.348, -84.338,
-      ],
-      mode: "markers",
-      marker: {
-        size: 8,
-        color: "#3b82f6",
-        opacity: 0.8,
-      },
-      text: Array(10).fill("No data available"),
-      name: "No data",
-      showlegend: true,
-      hoverinfo: "text",
-    }];
-  };
 
   // Handle metric selection change
   const handleDisplayMetricChange = (newMetric: string) => {
@@ -689,8 +666,8 @@ export default function Dashboard() {
         <Box sx={{ flex: 1 }}>
           <Grid container spacing={2}>
             {/* Performance Metrics */}
-            <Grid item xs={12} md={6} lg={12}>
-              <Paper sx={{ p: 2, height: "100%" }}>
+            <Grid size={{xs: 12, md: 6, lg: 12}}>
+              <Paper sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
                   Performance
                 </Typography>
@@ -705,8 +682,8 @@ export default function Dashboard() {
                         {perfMetrics.map((row) => (
                           <TableRow key={row.label}>
                             <TableCell>{row.label}</TableCell>
-                            <TableCell align="right">{row.value}</TableCell>
-                            <TableCell align="right" sx={{ width: 50 }}>
+                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>{row.value}</TableCell>
+                            <TableCell align="right" sx={{ width: 50, fontWeight: 'bold' }}>
                               {row.unit}
                             </TableCell>
                           </TableRow>
@@ -719,8 +696,8 @@ export default function Dashboard() {
             </Grid>
 
             {/* Volume & Equipment */}
-            <Grid item xs={12} md={6} lg={12}>
-              <Paper sx={{ p: 2, height: "100%" }}>
+            <Grid size={{xs: 12, md: 6, lg: 12}}>
+              <Paper sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
                   Volume & Equipment
                 </Typography>
@@ -735,8 +712,8 @@ export default function Dashboard() {
                         {volMetrics.map((row) => (
                           <TableRow key={row.label}>
                             <TableCell>{row.label}</TableCell>
-                            <TableCell align="right">{row.value}</TableCell>
-                            <TableCell align="right" sx={{ width: 50 }}>
+                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>{row.value}</TableCell>
+                            <TableCell align="right" sx={{ width: 50, fontWeight: 'bold' }}>
                               {row.unit}
                             </TableCell>
                           </TableRow>
@@ -748,7 +725,7 @@ export default function Dashboard() {
               </Paper>
             </Grid>
           </Grid>
-          <Paper sx={{ p: 2, height: "100%" }}>
+          <Paper sx={{ p: 2 }}>
             <TableContainer>
               <Table size="small">
                 <TableBody>
@@ -765,40 +742,49 @@ export default function Dashboard() {
         {/* Map Area */}
         <Box sx={{ flex: 2 }}>
           <Paper sx={{ p: 2, height: "100%", minHeight: "500px" }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel id="display-metric-label">Performance Metric</InputLabel>
-                <Select
-                  labelId="display-metric-label"
-                  label="Performance Metric"
-                  value={displayMetric}
-                  onChange={(e) => handleDisplayMetricChange(e.target.value as string)}
-                >
-                  <MenuItem value="dailyTrafficVolume">Daily Traffic Volume</MenuItem>
-                  <MenuItem value="throughput">Throughput</MenuItem>
-                  <MenuItem value="arrivalsOnGreen">Arrivals on Green</MenuItem>
-                  <MenuItem value="progressionRate">Progression Rate</MenuItem>
-                  <MenuItem value="spillbackRate">Spillback Rate</MenuItem>
-                  <MenuItem value="peakPeriodSplitFailures">Peak Period Split Failures</MenuItem>
-                  <MenuItem value="offPeakSplitFailures">Off-Peak Split Failures</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ height: "calc(100% - 60px)", width: "100%", position: "relative", minHeight: "400px" }}>
+            <Box sx={{ height: "100%", width: "100%", position: "relative", minHeight: "400px" }}>
               {mapLoading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                   <CircularProgress />
                 </Box>
               ) : (
-                <MapBox
-                  data={mapData}
-                  isRawTraces={true}
-                  loading={false}
-                  height="100%"
-                  showLegend={true}
-                  showControls={true}
-                />
+                <>
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: 10, 
+                    left: 10, 
+                    zIndex: 1000, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 1,
+                    p: 1
+                  }}>
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <InputLabel id="display-metric-label">Performance Metric</InputLabel>
+                      <Select
+                        labelId="display-metric-label"
+                        label="Performance Metric"
+                        value={displayMetric}
+                        onChange={(e) => handleDisplayMetricChange(e.target.value as string)}
+                      >
+                        <MenuItem value="dailyTrafficVolume">Daily Traffic Volume</MenuItem>
+                        <MenuItem value="throughput">Throughput</MenuItem>
+                        <MenuItem value="arrivalsOnGreen">Arrivals on Green</MenuItem>
+                        <MenuItem value="progressionRate">Progression Rate</MenuItem>
+                        <MenuItem value="spillbackRate">Spillback Rate</MenuItem>
+                        <MenuItem value="peakPeriodSplitFailures">Peak Period Split Failures</MenuItem>
+                        <MenuItem value="offPeakSplitFailures">Off-Peak Split Failures</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <MapBox
+                    data={mapData}
+                    isRawTraces={true}
+                    loading={false}
+                    height="100%"
+                    showLegend={true}
+                    showControls={true}
+                  />
+                </>
               )}
             </Box>
           </Paper>

@@ -206,27 +206,28 @@ export default function Operations() {
     lon: mapData.map((point) => point.lon),
     mode: "markers",
     marker: {
-      size: mapData.map((point) => {
-        // Scale marker size based on value
-        const min = 5;
-        const max = 15;
-        const value = point.value;
+      // size: mapData.map((point) => {
+      //   // Scale marker size based on value
+      //   const min = 5;
+      //   const max = 15;
+      //   const value = point.value;
 
-        // Make sure we don't scale unavailable data points
-        if (value === -1) {
-          return min;
-        }
+      //   // Make sure we don't scale unavailable data points
+      //   if (value === -1) {
+      //     return min;
+      //   }
 
-        if (selectedMetric === "throughput") {
-          // Scale for throughput (1000-8000)
-          return min + Math.min(((value - 1000) / 7000) * (max - min), max)
-        } else if (selectedMetric === "arrivalsOnGreen") {
-          // Scale for percentage (0-100)
-          return min + Math.min((value / 100) * (max - min), max)
-        } else {
-          return 8 // Default size
-        }
-      }),
+      //   if (selectedMetric === "throughput") {
+      //     // Scale for throughput (1000-8000)
+      //     return min + Math.min(((value - 1000) / 7000) * (max - min), max)
+      //   } else if (selectedMetric === "arrivalsOnGreen") {
+      //     // Scale for percentage (0-100)
+      //     return min + Math.min((value / 100) * (max - min), max)
+      //   } else {
+      //     return 8 // Default size
+      //   }
+      // }),
+      size: 6,
       color: mapData.map((point) => {
         // Color based on value using mapSettings
         const settingsKey = metricToSettingsMap[selectedMetric];
@@ -328,7 +329,7 @@ export default function Operations() {
       case "planningTimeIndex":
         return "Planning Time Index"
       case "dailyTrafficVolumes":
-        return "Daily Traffic Volumes"
+        return "Traffic Volume [veh/day]"
       default:
         return "Metric Trend"
     }
@@ -393,7 +394,7 @@ export default function Operations() {
           {/* Main Content */}
           <Grid container spacing={2}>
             {/* Metric Display */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{xs: 12, md: 4}}>
               <Box sx={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -410,7 +411,7 @@ export default function Operations() {
                   flex: 1,
                   minHeight: "130px"
                 }}>
-                  <Typography variant="h3" component="div" gutterBottom>
+                  <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: '500', fontSize: '24px' }}>
                     {metricData && formatMetricValue(metricData.value, metricData.unit)}
                   </Typography>
                   <Typography variant="subtitle1" color="text.secondary" gutterBottom>
@@ -431,7 +432,7 @@ export default function Operations() {
                   {metricData && metricData.change !== undefined && (
                     <>
                       <Typography
-                        variant="h5"
+                        variant="h6"
                         component="div"
                         sx={{
                           color:
@@ -442,6 +443,8 @@ export default function Operations() {
                                 : "text.secondary",
                           display: "flex",
                           alignItems: "center",
+                          fontWeight: '500',
+                          fontSize: '24px'
                         }}
                       >
                         {Math.abs(metricData.change).toFixed(1)}%
@@ -463,7 +466,7 @@ export default function Operations() {
             </Grid>
 
             {/* Map */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{xs: 12, md: 8}}>
               <Paper sx={{ 
                 p: 2, 
                 height: "100%", 
@@ -498,19 +501,19 @@ export default function Operations() {
             </Grid>
 
             {/* Bottom Charts */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
                   {getTimeSeriesTitle()}
                 </Typography>
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{xs: 12, md: 4}}>
                     <Plot
                       data={[locationBarData as any]}
                       layout={{
                         autosize: true,
-                        height: 500,
+                        height: 450,
                         margin: { l: 150, r: 10, t: 10, b: 50 },
                         yaxis: {
                           title: "",
@@ -549,12 +552,12 @@ export default function Operations() {
                   </Grid>
 
                   {/* Time Series Chart */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{xs: 12, md: 8}}>
                     <Plot
                       data={timeSeriesChartData() as any}
                       layout={{
                         autosize: true,
-                        height: 500,
+                        height: 450,
                         margin: { l: 50, r: 10, t: 10, b: 50 },
                         xaxis: { title: "Time Period" },
                         yaxis: {

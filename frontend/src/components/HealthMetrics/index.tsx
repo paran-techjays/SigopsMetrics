@@ -656,54 +656,23 @@ const MetricsTable = ({ type }: MetricsTableProps) => {
     }
 
     return (
-        <Box>
-            {/* <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" component="h2">
-                    {type} Metrics
-                </Typography>
-                
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DateRangePicker
-                        calendars={1}
-                        value={dateRange}
-                        onChange={handleChangeDateRange}
-                        slotProps={{
-                            textField: { 
-                                size: 'small',
-                                fullWidth: true,
-                                InputProps: {
-                                    startAdornment: (
-                                        <IconButton edge="start" sx={{ mr: 1 }}>
-                                            <CalendarTodayIcon fontSize="small" color="primary" />
-                                        </IconButton>
-                                    ),
-                                }
-                            },
-                            field: { 
-                                shouldRespectLeadingZeros: true,
-                                format: 'MM/dd/yyyy'
-                            },
-                        }}
-                        sx={{ 
-                            width: 300,
-                            '& .MuiOutlinedInput-root': {
-                                '& fieldset': {
-                                    borderColor: '#0070ed',
-                                },
-                                '&:hover fieldset': {
-                                    borderColor: '#0070ed',
-                                },
-                                '&.Mui-focused fieldset': {
-                                    borderColor: '#0070ed',
-                                },
-                            }
-                        }}
-                    />
-                </LocalizationProvider>
-            </Box> */}
-            
-            <TableContainer component={Paper}>
-                <Table size="small">
+        <Box sx={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            width: '70%',
+        }}>
+            <TableContainer 
+                component={Paper} 
+                sx={{ 
+                    flex: 1,
+                    overflow: 'auto',
+                    '& .MuiTable-root': {
+                        minWidth: 650
+                    }
+                }}
+            >
+                <Table size="small" stickyHeader>
                     <TableHead>
                         <TableRow>
                             {columns.map((column) => (

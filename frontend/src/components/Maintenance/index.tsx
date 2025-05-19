@@ -241,11 +241,11 @@ export default function Maintenance() {
           selectedMetric === "pedestrianPushbuttonUptime" || 
           selectedMetric === "cctvUptime" || 
           selectedMetric === "communicationUptime") {
-        return `${value.toFixed(1)}%`
+        return `${(value * 100).toFixed(1)}%`
       } else if (selectedMetric === "pedestrianPushbuttonActivity") {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       } else {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       }
     }
     return value
@@ -264,7 +264,7 @@ export default function Maintenance() {
     type: "bar",
     orientation: "h",
     marker: {
-      color: "#6c757d",
+      // color: "#6c757d",
     },
     hovertemplate: isPercentMetric
       ? '<b>%{y}</b><br>Value: %{x:.1%}<extra></extra>'
@@ -309,7 +309,7 @@ export default function Maintenance() {
       type: "scatter",
       mode: "lines",
       name: location,
-      line: { width: 1, color: "#6c757d" },
+      line: { width: 1 },
       hovertemplate: isPercentMetric
         ? '<b>%{text}</b><br>Date: %{x}<br>Value: %{y:.1%}<extra></extra>'
         : '<b>%{text}</b><br>Date: %{x}<br>Value: %{y}<extra></extra>',
@@ -623,6 +623,7 @@ export default function Maintenance() {
                           alignItems: "center",
                         }}
                       >
+                        {metricData.delta < 0 && "-"}
                         {Math.abs(metricData.delta * 100).toFixed(1)}%
                         {metricData.delta > 0 ? (
                           <ArrowUpwardIcon fontSize="small" sx={{ ml: 0.5 }} />
@@ -667,7 +668,7 @@ export default function Maintenance() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={8}
+                        zoom={6}
                         renderLegend={getMapLegend}
                       />
                     </>

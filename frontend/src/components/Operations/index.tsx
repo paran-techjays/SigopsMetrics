@@ -102,6 +102,7 @@ export default function Operations() {
 
   // Format the metric value for display
   const formatMetricValue = (value: number | string, unit?: string) => {
+    console.log('formatMetricValue', value);
     if (typeof value === "number") {
       // Format based on the metric type
       if (
@@ -110,7 +111,7 @@ export default function Operations() {
         selectedMetric === "peakPeriodSplitFailures" ||
         selectedMetric === "offPeakSplitFailures"
       ) {
-        return `${value.toFixed(1)}%`
+        return `${(value * 100).toFixed(1)}%`
       } else if (
         selectedMetric === "progressionRatio" ||
         selectedMetric === "travelTimeIndex" ||
@@ -118,7 +119,7 @@ export default function Operations() {
       ) {
         return value.toFixed(2)
       } else {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       }
     }
     return value
@@ -317,7 +318,7 @@ export default function Operations() {
       case "throughput":
         return "Throughput (peak veh/hr)"
       case "arrivalsOnGreen":
-        return "Arrivals on Green (%)"
+        return "Arrivals on Green [%]"
       case "progressionRatio":
         return "Progression Ratio"
       case "spillbackRatio":
@@ -357,11 +358,13 @@ export default function Operations() {
       case "planningTimeIndex":
         return "Planning Time Index"
       case "dailyTrafficVolumes":
-        return "Average daily traffic"
+        return "Traffic Volume [veh/day]"
       default:
         return ""
     }
   }
+
+  console.log('metricData', metricData);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -492,8 +495,8 @@ export default function Operations() {
                         isRawTraces={true}
                         loading={false}
                         height="100%"
-                        center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={8}
+                        // center={{ lat: 33.789, lon: -84.388 }}
+                        zoom={6}
                         renderLegend={getMapLegend}
                       />
                     </>

@@ -64,6 +64,14 @@ export interface MonthAverage {
     // Add other properties
 }
 
+export interface MetricsAverage {
+    label: string;
+    avg: number;
+    delta: number;
+    zoneGroup: string | null;
+    weight: number;
+}
+
 // Request types
 export interface MetricsFilterRequest {
     source: string;

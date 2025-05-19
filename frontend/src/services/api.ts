@@ -1,6 +1,7 @@
 // API service for fetching data
 import { apiClient } from './api/apiClient';
 import AppConfig from '../utils/appConfig';
+import { FilterParams } from '../types/api.types';
 
 // Types
 export interface MetricData {
@@ -90,12 +91,7 @@ const getDefaultPayload = (region: string) => ({
 });
 
 // Fetch straight average metric data
-export const fetchMetricData = async (
-  metric: string,
-  region: string,
-  dateRange: string,
-  dateAggregation: string,
-): Promise<MetricData> => {
+export const fetchMetricData = async (metric: string, commonFilterParams): Promise<MetricData> => {
   try {
     const apiKey = metricApiKeys[metric];
     
@@ -105,7 +101,7 @@ export const fetchMetricData = async (
     
     const data = await apiClient.post<any>(
       `/metrics/straightaverage?source=main&measure=${apiKey}`,
-      getDefaultPayload(region)
+      commonFilterParams
     );
     
     return {
@@ -143,7 +139,7 @@ const getMetricUnit = (metric: string): string | undefined => {
 };
 
 // Fetch location metrics
-export const fetchLocationMetrics = async (metric: string, region: string): Promise<LocationMetric[]> => {
+export const fetchLocationMetrics = async (metric: string, commonFilterParams: FilterParams): Promise<LocationMetric[]> => {
   try {
     const apiKey = metricApiKeys[metric];
     
@@ -153,7 +149,7 @@ export const fetchLocationMetrics = async (metric: string, region: string): Prom
     
     const data = await apiClient.post<any[]>(
       `/metrics/average?source=main&measure=${apiKey}&dashboard=false`,
-      getDefaultPayload(region)
+      commonFilterParams
     );
     
     return data.map((item: any) => ({
@@ -169,9 +165,7 @@ export const fetchLocationMetrics = async (metric: string, region: string): Prom
 // Fetch time series data
 export const fetchTimeSeriesData = async (
   metric: string,
-  region: string,
-  dateRange: string,
-  dateAggregation: string,
+  commonFilterParams: FilterParams,
 ): Promise<TimeSeriesData[]> => {
   try {
     const apiKey = metricApiKeys[metric];
@@ -182,7 +176,7 @@ export const fetchTimeSeriesData = async (
     
     const data = await apiClient.post<any[]>(
       `/metrics/filter?source=main&measure=${apiKey}`,
-      getDefaultPayload(region)
+      commonFilterParams
     );
     
     // Map API response to TimeSeriesData
@@ -214,7 +208,7 @@ const formatDate = (dateString: string): string => {
 };
 
 // Fetch map data
-export const fetchMapData = async (metric: string, region: string): Promise<MapPoint[]> => {
+export const fetchMapData = async (metric: string, commonFilterParams: FilterParams): Promise<MapPoint[]> => {
   try {
     const apiKey = metricApiKeys[metric];
     
@@ -228,7 +222,7 @@ export const fetchMapData = async (metric: string, region: string): Promise<MapP
     // Fetch signal metrics
     const metrics = await apiClient.post<any[]>(
       `/metrics/signals/filter/average?source=main&measure=${apiKey}`,
-      getDefaultPayload(region)
+      commonFilterParams
     );
     
     // Create a map of signal IDs to metric values

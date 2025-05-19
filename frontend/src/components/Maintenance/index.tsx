@@ -15,6 +15,8 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward"
 import RemoveIcon from "@mui/icons-material/Remove"
 import Plot from "react-plotly.js"
 import MapBox from "../../components/MapBox"
+import LocationBarChart from "../../components/charts/LocationBarChart"
+import TimeSeriesChart from "../../components/charts/TimeSeriesChart"
 import { metricApiKeys } from "../../services/api"
 import mapSettings from "../../utils/mapSettings"
 import AppConfig from '../../utils/appConfig'
@@ -27,6 +29,9 @@ import {
   fetchSignalsFilterAverage
 } from '../../store/slices/metricsSlice'
 import { MetricsFilterRequest } from '../../types/api.types'
+import { useSelector } from "react-redux"
+import { selectFilterParams } from "../../store/slices/filterSlice"
+import { RootState } from "../../store"
 
 // Define the available metrics
 const metrics = [
@@ -127,6 +132,9 @@ export default function Maintenance() {
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
   const [mapData, setMapData] = useState<MapPoint[]>([]);
 
+  const commonFilterParams = useSelector(selectFilterParams);
+  const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
+  console.log("filtersApplied", filtersApplied);
   // Redux state
   const dispatch = useAppDispatch();
   const { 
@@ -163,21 +171,38 @@ export default function Maintenance() {
         };
         
         // Dispatch actions to fetch data
-        dispatch(fetchStraightAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchStraightAverage({ params, filterParams: commonFilterParams }));
         dispatch(fetchAllSignals());
-        dispatch(fetchSignalsFilterAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchSignalsFilterAverage({ params, filterParams: commonFilterParams }));
         dispatch(fetchMetricsAverage({ 
           params: { ...params, dashboard: false }, 
-          filterParams: defaultPayload 
+          filterParams: commonFilterParams 
         }));
-        dispatch(fetchMetricsFilter({ params, filterParams: defaultPayload }));
+        dispatch(fetchMetricsFilter({ params, filterParams: commonFilterParams }));
       } catch (error) {
         console.error("Error dispatching Redux actions:", error);
       }
     };
 
     fetchData();
-  }, [selectedMetricKey, dispatch]);
+  }, [selectedMetricKey, filtersApplied]);
+
+  useEffect(() => {
+    if (metricsAverage.data) {
+      const sortedMetricsAvg = metricsAverage.data.map((item: any) => ({
+        label: item.label,
+        avg: item.avg || 0
+      })).sort((a: LocationMetric, b: LocationMetric) => a.avg - b.avg);
+      setLocationMetrics(sortedMetricsAvg as any);
+    }
+  }, [metricsAverage.data]);
+
+  useEffect(() => {
+    // Set time series data when available
+    if (metricsFilter.data) {
+      setTimeSeriesData(metricsFilter.data as any);
+    }
+  }, [metricsFilter.data])
 
   // Process data when Redux state changes
   useEffect(() => {
@@ -201,17 +226,7 @@ export default function Maintenance() {
         }));
       setMapData(mapPointsData);
     }
-    
-    // Set location metrics when available
-    if (metricsAverage.data) {
-      setLocationMetrics(metricsAverage.data as any);
-    }
-    
-    // Set time series data when available
-    if (metricsFilter.data) {
-      setTimeSeriesData(metricsFilter.data as any);
-    }
-  }, [signals, signalsFilterAverage.data, metricsAverage.data, metricsFilter.data]);
+  }, [signals, signalsFilterAverage.data, filtersApplied]);
 
   // Handle metric tab change
   const handleMetricChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -669,64 +684,20 @@ export default function Maintenance() {
                 </Typography>
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
-                  <Grid size={{xs: 12, md: 6}}>
-                    <Plot
-                      data={[locationBarData as any]}
-                      layout={{
-                        autosize: true,
-                        height: 500,
-                        margin: { l: 150, r: 10, t: 10, b: 50 },
-                        yaxis: {
-                          title: "",
-                          automargin: true,
-                          tickfont: { size: 10 },
-                        },
-                        xaxis: {
-                          title:
-                            isPercentMetric
-                              ? "Uptime (%)"
-                              : selectedMetric === "pedestrianPushbuttonActivity"
-                                ? "Pushbutton Activity"
-                                : "Value",
-                          dtick: isPercentMetric ? 0.1 
-                                : selectedMetric === "pedestrianPushbuttonActivity" ? 200 
-                                : undefined,
-                          tickformat: isPercentMetric ? '.1%' : undefined,
-                          range: isPercentMetric ? [0, 1] : undefined,
-                          autorange: !isPercentMetric,
-                        },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
+                  <Grid size={{xs: 12, md: 4}}>
+                    <LocationBarChart
+                      data={locationBarData as any}
+                      selectedMetric={selectedMetric}
+                      height={500}
                     />
                   </Grid>
 
                   {/* Time Series Chart */}
-                  <Grid size={{xs: 12, md: 6}}>
-                    <Plot
+                  <Grid size={{xs: 12, md: 8}}>
+                    <TimeSeriesChart
                       data={timeSeriesChartData() as any}
-                      layout={{
-                        autosize: true,
-                        height: 500,
-                        margin: { l: 50, r: 10, t: 10, b: 50 },
-                        xaxis: { title: "Time Period" },
-                        yaxis: {
-                          title:
-                            isPercentMetric
-                              ? "Uptime Trend"
-                              : selectedMetric === "pedestrianPushbuttonActivity"
-                                ? "Activity Trend"
-                                : "Trend",
-                          dtick: isPercentMetric ? 0.1 
-                                : selectedMetric === "pedestrianPushbuttonActivity" ? 200 
-                                : undefined,
-                          tickformat: isPercentMetric ? '.1%' : undefined,
-                          range: isPercentMetric ? [0, 1] : undefined,
-                          autorange: !isPercentMetric,
-                        },
-                        showlegend: false,
-                        legend: { x: 0, y: 1 },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
+                      selectedMetric={selectedMetric}
+                      height={500}
                     />
                   </Grid>
                 </Grid>

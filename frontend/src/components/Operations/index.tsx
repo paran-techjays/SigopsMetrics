@@ -31,6 +31,7 @@ import TimeSeriesChart from "../charts/TimeSeriesChart"
 import { useSelector } from "react-redux"
 import { selectFilterParams } from "../../store/slices/filterSlice"
 import { RootState } from "../../store"
+import chartTitles from "../../constants/mapData"
 
 // Define the available metrics
 const metrics = [
@@ -314,54 +315,56 @@ export default function Operations() {
 
   // Get the title for the time series chart
   const getTimeSeriesTitle = () => {
-    switch (selectedMetric) {
-      case "throughput":
-        return "Throughput (peak veh/hr)"
-      case "arrivalsOnGreen":
-        return "Arrivals on Green [%]"
-      case "progressionRatio":
-        return "Progression Ratio"
-      case "spillbackRatio":
-        return "Spillback Ratio"
-      case "peakPeriodSplitFailures":
-        return "Peak Period Split Failures"
-      case "offPeakSplitFailures":
-        return "Off-Peak Split Failures"
-      case "travelTimeIndex":
-        return "Travel Time Index"
-      case "planningTimeIndex":
-        return "Planning Time Index"
-      case "dailyTrafficVolumes":
-        return "Traffic Volume [veh/day]"
-      default:
-        return "Metric Trend"
-    }
+    return chartTitles[selectedMetric]["bottomChartTitle"]
+    // switch (selectedMetric) {
+    //   case "throughput":
+    //     return "Throughput (peak veh/hr)"
+    //   case "arrivalsOnGreen":
+    //     return "Arrivals on Green [%]"
+    //   case "progressionRatio":
+    //     return "Progression Ratio"
+    //   case "spillbackRatio":
+    //     return "Spillback Ratio"
+    //   case "peakPeriodSplitFailures":
+    //     return "Peak Period Split Failures"
+    //   case "offPeakSplitFailures":
+    //     return "Off-Peak Split Failures"
+    //   case "travelTimeIndex":
+    //     return "Travel Time Index"
+    //   case "planningTimeIndex":
+    //     return "Planning Time Index"
+    //   case "dailyTrafficVolumes":
+    //     return "Traffic Volume [veh/day]"
+    //   default:
+    //     return "Metric Trend"
+    // }
   }
 
   // Get the subtitle for the metric display
   const getMetricSubtitle = () => {
-    switch (selectedMetric) {
-      case "throughput":
-        return "Average vehicles per hour"
-      case "arrivalsOnGreen":
-        return "Arrivals on Green"
-      case "progressionRatio":
-        return "Progression Ratio"
-      case "spillbackRatio":
-        return "Spillback Ratio"
-      case "peakPeriodSplitFailures":
-        return "Peak Period Split Failures"
-      case "offPeakSplitFailures":
-        return "Off-Peak Split Failures"
-      case "travelTimeIndex":
-        return "Travel Time Index"
-      case "planningTimeIndex":
-        return "Planning Time Index"
-      case "dailyTrafficVolumes":
-        return "Traffic Volume [veh/day]"
-      default:
-        return ""
-    }
+    return chartTitles[selectedMetric]["metricCardTitle"]
+    // switch (selectedMetric) {
+    //   case "throughput":
+    //     return "Average vehicles per hour"
+    //   case "arrivalsOnGreen":
+    //     return "Arrivals on Green"
+    //   case "progressionRatio":
+    //     return "Progression Ratio"
+    //   case "spillbackRatio":
+    //     return "Spillback Ratio"
+    //   case "peakPeriodSplitFailures":
+    //     return "Peak Period Split Failures"
+    //   case "offPeakSplitFailures":
+    //     return "Off-Peak Split Failures"
+    //   case "travelTimeIndex":
+    //     return "Travel Time Index"
+    //   case "planningTimeIndex":
+    //     return "Planning Time Index"
+    //   case "dailyTrafficVolumes":
+    //     return "Traffic Volume [veh/day]"
+    //   default:
+    //     return ""
+    // }
   }
 
   console.log('metricData', metricData);

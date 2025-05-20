@@ -1,5 +1,6 @@
 import React from 'react';
 import Plot from 'react-plotly.js';
+import chartTitles from '../../constants/mapData';
 
 interface LocationBarChartProps {
   data: any;
@@ -72,7 +73,10 @@ const LocationBarChart: React.FC<LocationBarChartProps> = ({
           tickfont: { size: 10 },
         },
         xaxis: {
-          title: getAxisTitle(),
+          title: {
+            text: chartTitles[selectedMetric]["locationBarChartTitle"],
+            standoff: 40,
+          },
           dtick: getDtick(),
           tickformat: getTickFormat(),
           range: getRange(),

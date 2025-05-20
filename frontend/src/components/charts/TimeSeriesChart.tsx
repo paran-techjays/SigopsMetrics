@@ -1,5 +1,6 @@
 import React from 'react';
 import Plot from 'react-plotly.js';
+import chartTitles from '../../constants/mapData';
 
 interface TimeSeriesChartProps {
   data: any[];
@@ -61,6 +62,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return !["travelTimeIndex", "planningTimeIndex"].includes(selectedMetric);
   };
 
+  console.log('chartTitles', selectedMetric)
   return (
     <Plot
       data={data}
@@ -68,9 +70,14 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         autosize: true,
         height,
         margin: { l: 50, r: 10, t: 10, b: 50 },
-        xaxis: { title: "Time Period" },
+        xaxis: { 
+          title: {
+            text: chartTitles[selectedMetric]["timeSeriesChartTitle"],
+            standoff: 40,
+          },
+        },
         yaxis: {
-          title: getYAxisTitle(),
+          // title: getYAxisTitle(),
           dtick: getDtick(),
           tickformat: getTickFormat(),
           range: getRange(),

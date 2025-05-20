@@ -32,6 +32,7 @@ import { MetricsFilterRequest } from '../../types/api.types'
 import { useSelector } from "react-redux"
 import { selectFilterParams } from "../../store/slices/filterSlice"
 import { RootState } from "../../store"
+import chartTitles from "../../constants/mapData"
 
 // Define the available metrics
 const metrics = [
@@ -506,38 +507,41 @@ export default function Maintenance() {
 
   // Get the title for the time series chart
   const getTimeSeriesTitle = () => {
-    switch (selectedMetric) {
-      case "detectorUptime":
-        return "Detector Uptime"
-      case "pedestrianPushbuttonActivity":
-        return "Daily Pedestrian Pushbutton Activity"
-      case "pedestrianPushbuttonUptime":
-        return "Pedestrian Pushbutton Uptime"
-      case "cctvUptime":
-        return "CCTV Uptime"
-      case "communicationUptime":
-        return "Communication Uptime"
-      default:
-        return "Metric Trend"
-    }
+    return chartTitles[selectedMetric]["bottomChartTitle"]
+
+    // switch (selectedMetric) {
+    //   case "detectorUptime":
+    //     return "Detector Uptime"
+    //   case "pedestrianPushbuttonActivity":
+    //     return "Daily Pedestrian Pushbutton Activity"
+    //   case "pedestrianPushbuttonUptime":
+    //     return "Pedestrian Pushbutton Uptime"
+    //   case "cctvUptime":
+    //     return "CCTV Uptime"
+    //   case "communicationUptime":
+    //     return "Communication Uptime"
+    //   default:
+    //     return "Metric Trend"
+    // }
   }
 
   // Get the subtitle for the metric display
   const getMetricSubtitle = () => {
-    switch (selectedMetric) {
-      case "detectorUptime":
-        return "Vehicle detector uptime"
-      case "pedestrianPushbuttonActivity":
-        return "Average daily pedestrian calls"
-      case "pedestrianPushbuttonUptime":
-        return "Pedestrian pushbutton uptime"
-      case "cctvUptime":
-        return "Surveillance camera uptime"
-      case "communicationUptime":
-        return "Communications system uptime"
-      default:
-        return ""
-    }
+    return chartTitles[selectedMetric]["metricCardTitle"]
+    // switch (selectedMetric) {
+    //   case "detectorUptime":
+    //     return "Vehicle detector uptime"
+    //   case "pedestrianPushbuttonActivity":
+    //     return "Average daily pedestrian calls"
+    //   case "pedestrianPushbuttonUptime":
+    //     return "Pedestrian pushbutton uptime"
+    //   case "cctvUptime":
+    //     return "Surveillance camera uptime"
+    //   case "communicationUptime":
+    //     return "Communications system uptime"
+    //   default:
+    //     return ""
+    // }
   }
 
   return (
@@ -680,7 +684,7 @@ export default function Maintenance() {
             {/* Bottom Charts */}
             <Grid size={{xs: 12}}>
               <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
                   {getTimeSeriesTitle()}
                 </Typography>
                 <Grid container spacing={2}>

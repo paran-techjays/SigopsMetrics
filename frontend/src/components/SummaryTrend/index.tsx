@@ -9,28 +9,13 @@ import { fetchSummaryTrends } from '../../store/slices/summaryTrendSlice';
 import { FilterParams } from '../../types/api.types';
 import FilterChipList from '../FilterChipList';
 import AppConfig from '../../utils/appConfig';
+import { useSelector } from 'react-redux';
+import { selectFilterParams } from '../../store/slices/filterSlice';
+import { RootState } from '../../store';
 
 const SummaryTrend: React.FC = () => {
   const dispatch = useAppDispatch();
   const { data, loading, error } = useAppSelector(state => state.summaryTrend);
-  const [filterState, setFilterState] = useState<FilterParams>({
-    dateRange: 4,
-    timePeriod: 4,
-    customStart: null,
-    customEnd: null,
-    daysOfWeek: null,
-    startTime: null,
-    endTime: null,
-    zone_Group: "Central Metro",
-    zone: null,
-    agency: null,
-    county: null,
-    city: null,
-    corridor: null,
-    signalId: "",
-    priority: "",
-    classification: ""
-  });
   
   // Strings for metric names that may change based on time period
   const [aogString, setAogString] = useState('aogd');
@@ -39,6 +24,9 @@ const SummaryTrend: React.FC = () => {
   const [sfString, setSfString] = useState('sfd');
   const [vpString, setVpString] = useState('vpd');
   const [papString, setPapString] = useState('papd');
+  const commonFilterParams = useSelector(selectFilterParams);
+  const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
+
   
   const colors = new Colors();
   
@@ -278,17 +266,9 @@ const SummaryTrend: React.FC = () => {
 
   useEffect(() => {
     // Fetch summary trends data when filter changes
-    dispatch(fetchSummaryTrends(filterState));
-    setHourlyStrings(filterState);
-  }, [dispatch, filterState]);
-
-  // Handle filter changes from FilterChipList
-  const handleFilterChange = (newFilter: Partial<FilterParams>) => {
-    setFilterState(prev => ({
-      ...prev,
-      ...newFilter
-    }));
-  };
+    dispatch(fetchSummaryTrends(commonFilterParams));
+    setHourlyStrings(commonFilterParams);
+  }, [filtersApplied]);
 
   if (loading) {
     return (
@@ -307,9 +287,7 @@ const SummaryTrend: React.FC = () => {
   }
 
   return (
-    <>
-      <FilterChipList onFilterChange={handleFilterChange} activeFilters={filterState} />
-      
+    <>      
       {data && (
         <Container maxWidth={false}>
           <Grid container spacing={3}>

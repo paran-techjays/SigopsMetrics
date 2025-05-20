@@ -98,6 +98,30 @@ const formatMetricValue = (value: any, measure: string): string => {
   return Number(value).toFixed(2);
 };
 
+// Helper function to generate tooltip text for map markers
+const generateTooltipText = (
+  signal: any, 
+  field: string, 
+  label: string, 
+  formatType: string = "number", 
+  formatDecimals: number = 0
+): string => {
+  const sigText = `<b>Signal: ${signal.signalID}</b> | ${signal.mainStreetName} @ ${signal.sideStreetName}`;
+  
+  if (signal[field] === undefined || signal[field] === null || signal[field] === -1) {
+    return `${sigText}<br><b>${label}</b>: Unavailable`;
+  }
+  
+  let formattedValue;
+  if (formatType === "percent") {
+    formattedValue = `${(signal[field] * 100).toFixed(formatDecimals)}%`;
+  } else {
+    formattedValue = Number(signal[field]).toFixed(formatDecimals);
+  }
+  
+  return `${sigText}<br><b>${label}</b>: ${formattedValue}`;
+};
+
 // Lists of metrics for each category
 const performanceMetricCodes = ["tp", "aogd", "prd", "qsd", "sfd", "sfo", "tti", "pti"];
 const volumeMetricCodes = ["vpd", "vphpa", "vphpp", "papd", "du", "pau", "cctv", "cu"];
@@ -123,35 +147,6 @@ const metricToSettingsMap: Record<string, string> = {
   peakPeriodSplitFailures: "peakPeriodSplitFailures",
   offPeakSplitFailures: "offPeakSplitFailures",
 };
-
-// Add signal interface
-interface Signal {
-  signalID: string;
-  latitude: number;
-  longitude: number;
-  mainStreetName: string;
-  sideStreetName: string;
-  [key: string]: any;
-}
-
-// Add metric data interface
-interface MetricDataItem {
-  label: string;
-  avg: number;
-  delta: number;
-  zoneGroup: string | null;
-  weight: number;
-}
-
-interface MapPoint {
-  signalID: string;
-  lat: number;
-  lon: number;
-  name: string;
-  value: number;
-  mainStreet?: string;
-  sideStreet?: string;
-}
 
 export default function Dashboard() {
   const [displayMetric, setDisplayMetric] = useState("dailyTrafficVolume");
@@ -232,75 +227,17 @@ export default function Dashboard() {
     signalsFilterAverage,
     loading: reduxLoading
   } = useAppSelector((state: RootState) => state.metrics);
-
-  console.log("signalsFilterAverage:", signalsFilterAverage);
   
   // Use combined loading state
   const loading = reduxLoading || straightAverage.loading || signalsFilterAverage.loading;
   // const loading = reduxLoading;
 
   const commonFilterParams = useSelector(selectFilterParams);
-  const isFiltering = useSelector((state: RootState) => state.filter.isFiltering);
   const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
 
   useEffect(() => {
     dispatch(fetchAllSignals());
   }, []);
-
-  // Calculate average of a field in an array of objects
-  const calculateAverage = useCallback((data: any[], field: string): number => {
-    if (!data || data.length === 0) return 0;
-    
-    const values = data.map(item => item[field]);
-    const sum = values.reduce((a, b) => a + b, 0);
-    return sum / values.length;
-  }, []);
-
-  // Calculate zoom level based on data points
-  const calculateZoom = useCallback((data: any[]): number => {
-    if (!data || data.length <= 1) return 12;
-    
-    const latitudes = data.map(item => item.latitude);
-    const longitudes = data.map(item => item.longitude);
-    
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    
-    const widthY = maxLat - minLat;
-    const widthX = maxLng - minLng;
-    
-    const zoomY = -1.446 * Math.log(widthY) + 8.2753;
-    const zoomX = -1.415 * Math.log(widthX) + 9.7068;
-    
-    return Math.min(zoomY, zoomX);
-  }, []);
-
-  // Format value for display
-  const formatValue = useCallback((value: number, formatType: string, decimals: number): string => {
-    if (value === -1 || isNaN(value)) return "Unavailable";
-    
-    if (formatType === "percent") {
-      return `${(value * 100).toFixed(decimals)}%`;
-    } else {
-      return Math.round(value).toLocaleString();
-    }
-  }, []);
-
-  // Generate tooltip text
-  const generateTooltipText = useCallback((signal: any, field: string, label: string, formatType: string, decimals: number): string => {
-    const signalInfo = `ID: ${signal.signalID}<br>${signal.mainStreetName} @ ${signal.sideStreetName}`;
-    let value;
-    
-    if (signal[field] === -1 || signal[field] === undefined) {
-      value = "Unavailable";
-    } else {
-      value = formatValue(signal[field], formatType, decimals);
-    }
-    
-    return `${signalInfo}<br>${label}: ${value}`;
-  }, [formatValue]);
 
   useEffect(() => {
     console.log("signalsFilterAverage:", signals.length > 0, signalsFilterAverage.data);
@@ -355,7 +292,13 @@ export default function Dashboard() {
             symbol: "circle"
           },
           text: unavailableSignals.map((signal: any) => 
-            `${signal.signalID}<br>${signal.mainStreetName} @ ${signal.sideStreetName}<br>No data available`
+            generateTooltipText(
+              signal, 
+              settings.field, 
+              settings.label, 
+              settings.formatType, 
+              settings.formatDecimals
+            )
           ),
           name: settings.legendLabels[0], // "Unavailable"
           showlegend: true,
@@ -402,76 +345,7 @@ export default function Dashboard() {
           });
         }
       }
-      
-      // Calculate map center and zoom
-      const centerLat = calculateAverage(joinedData, 'latitude');
-      const centerLon = calculateAverage(joinedData, 'longitude');
-      const zoom = calculateZoom(joinedData);
-      
-      // Create layout with proper center and zoom
-      const mapLayout = {
-        autosize: true,
-        hovermode: "closest",
-        mapbox: {
-          style: "carto-positron",
-          center: { lat: centerLat, lon: centerLon },
-          zoom: zoom,
-          pitch: 45, // Tilt view for 3D effect
-          bearing: 0,
-          dragmode: "zoom",
-          accesstoken: "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
-        },
-        margin: { r: 0, t: 0, b: 0, l: 0 },
-        legend: {
-          x: 1,
-          xanchor: 'right',
-          y: 0.9,
-          bgcolor: 'rgba(255, 255, 255, 0.8)',
-          bordercolor: 'rgba(0, 0, 0, 0.1)',
-          borderwidth: 1
-        },
-        dragmode: "pan",
-        updatemenus: [
-          {
-            buttons: [
-              {
-                args: [{ "mapbox.zoom": 11, "mapbox.center.lat": centerLat, "mapbox.center.lon": centerLon }],
-                label: "Reset View",
-                method: "relayout"
-              },
-              {
-                args: [{ "mapbox.pitch": 0, "mapbox.bearing": 0 }],
-                label: "2D View",
-                method: "relayout"
-              },
-              {
-                args: [{ "mapbox.pitch": 45, "mapbox.bearing": 0 }],
-                label: "3D View",
-                method: "relayout"
-              },
-              {
-                args: [{ "mapbox.bearing": 45 }],
-                label: "Rotate Right",
-                method: "relayout"
-              },
-              {
-                args: [{ "mapbox.bearing": -45 }],
-                label: "Rotate Left",
-                method: "relayout"
-              }
-            ],
-            direction: "left",
-            pad: { r: 10, t: 10 },
-            showactive: false,
-            type: "buttons",
-            x: 0.05,
-            y: 0.05,
-            xanchor: "left",
-            yanchor: "bottom"
-          }
-        ]
-      };
-      console.log("Map traces:", mapTraces);
+
       setMapData(mapTraces);
       // setMapLayout(mapLayout);
     } else {
@@ -644,11 +518,6 @@ export default function Dashboard() {
                   Performance
                 </Typography>
                 <TableContainer>
-                  {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : (
                     <Table size="small">
                       <TableBody>
                         {perfMetrics.map((row) => (
@@ -662,7 +531,6 @@ export default function Dashboard() {
                         ))}
                       </TableBody>
                     </Table>
-                  )}
                 </TableContainer>
               </Paper>
             </Grid>
@@ -674,11 +542,6 @@ export default function Dashboard() {
                   Volume & Equipment
                 </Typography>
                 <TableContainer>
-                  {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : (
                     <Table size="small">
                       <TableBody>
                         {volMetrics.map((row) => (
@@ -692,7 +555,6 @@ export default function Dashboard() {
                         ))}
                       </TableBody>
                     </Table>
-                  )}
                 </TableContainer>
               </Paper>
             </Grid>

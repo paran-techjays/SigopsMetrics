@@ -9,15 +9,10 @@ import Paper from "@mui/material/Paper"
 import Grid from "@mui/material/Grid"
 import Tabs from "@mui/material/Tabs"
 import Tab from "@mui/material/Tab"
-import FormControl from "@mui/material/FormControl"
-import Select from "@mui/material/Select"
-import MenuItem from "@mui/material/MenuItem"
-import InputLabel from "@mui/material/InputLabel"
 import CircularProgress from "@mui/material/CircularProgress"
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward"
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward"
 import RemoveIcon from "@mui/icons-material/Remove"
-import Plot from "react-plotly.js"
 import MapBox from "../../components/MapBox"
 import {
   fetchMetricData,
@@ -31,6 +26,12 @@ import {
   type MapPoint,
 } from "../../services/api"
 import mapSettings from "../../utils/mapSettings"
+import LocationBarChart from "../charts/LocationBarChart"
+import TimeSeriesChart from "../charts/TimeSeriesChart"
+import { useSelector } from "react-redux"
+import { selectFilterParams } from "../../store/slices/filterSlice"
+import { RootState } from "../../store"
+import chartTitles from "../../constants/mapData"
 
 // Define the available metrics
 const metrics = [
@@ -60,6 +61,8 @@ export default function Operations() {
   const [locationMetrics, setLocationMetrics] = useState<LocationMetric[]>([])
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([])
   const [mapData, setMapData] = useState<MapPoint[]>([])
+  const commonFilterParams = useSelector(selectFilterParams);
+  const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
 
   // Fetch data when filters or selected metric changes
   useEffect(() => {
@@ -68,10 +71,10 @@ export default function Operations() {
       try {
         // Fetch all data in parallel
         const [metricResult, locationsResult, timeSeriesResult, mapResult] = await Promise.all([
-          fetchMetricData(selectedMetric, region, dateRange, dateAggregation),
-          fetchLocationMetrics(selectedMetric, region),
-          fetchTimeSeriesData(selectedMetric, region, dateRange, dateAggregation),
-          fetchMapData(selectedMetric, region),
+          fetchMetricData(selectedMetric, commonFilterParams),
+          fetchLocationMetrics(selectedMetric, commonFilterParams),
+          fetchTimeSeriesData(selectedMetric, commonFilterParams),
+          fetchMapData(selectedMetric, commonFilterParams),
         ]);
 
         setMetricData(metricResult);
@@ -91,7 +94,7 @@ export default function Operations() {
     };
 
     fetchData();
-  }, [selectedMetric, region, dateRange, dateAggregation]);
+  }, [selectedMetric, filtersApplied]);
 
   // Handle metric tab change
   const handleMetricChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -100,6 +103,7 @@ export default function Operations() {
 
   // Format the metric value for display
   const formatMetricValue = (value: number | string, unit?: string) => {
+    console.log('formatMetricValue', value);
     if (typeof value === "number") {
       // Format based on the metric type
       if (
@@ -108,7 +112,7 @@ export default function Operations() {
         selectedMetric === "peakPeriodSplitFailures" ||
         selectedMetric === "offPeakSplitFailures"
       ) {
-        return `${value.toFixed(1)}%`
+        return `${(value * 100).toFixed(1)}%`
       } else if (
         selectedMetric === "progressionRatio" ||
         selectedMetric === "travelTimeIndex" ||
@@ -116,7 +120,7 @@ export default function Operations() {
       ) {
         return value.toFixed(2)
       } else {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       }
     }
     return value
@@ -311,55 +315,59 @@ export default function Operations() {
 
   // Get the title for the time series chart
   const getTimeSeriesTitle = () => {
-    switch (selectedMetric) {
-      case "throughput":
-        return "Throughput (peak veh/hr)"
-      case "arrivalsOnGreen":
-        return "Arrivals on Green (%)"
-      case "progressionRatio":
-        return "Progression Ratio"
-      case "spillbackRatio":
-        return "Spillback Ratio"
-      case "peakPeriodSplitFailures":
-        return "Peak Period Split Failures"
-      case "offPeakSplitFailures":
-        return "Off-Peak Split Failures"
-      case "travelTimeIndex":
-        return "Travel Time Index"
-      case "planningTimeIndex":
-        return "Planning Time Index"
-      case "dailyTrafficVolumes":
-        return "Traffic Volume [veh/day]"
-      default:
-        return "Metric Trend"
-    }
+    return chartTitles[selectedMetric]["bottomChartTitle"]
+    // switch (selectedMetric) {
+    //   case "throughput":
+    //     return "Throughput (peak veh/hr)"
+    //   case "arrivalsOnGreen":
+    //     return "Arrivals on Green [%]"
+    //   case "progressionRatio":
+    //     return "Progression Ratio"
+    //   case "spillbackRatio":
+    //     return "Spillback Ratio"
+    //   case "peakPeriodSplitFailures":
+    //     return "Peak Period Split Failures"
+    //   case "offPeakSplitFailures":
+    //     return "Off-Peak Split Failures"
+    //   case "travelTimeIndex":
+    //     return "Travel Time Index"
+    //   case "planningTimeIndex":
+    //     return "Planning Time Index"
+    //   case "dailyTrafficVolumes":
+    //     return "Traffic Volume [veh/day]"
+    //   default:
+    //     return "Metric Trend"
+    // }
   }
 
   // Get the subtitle for the metric display
   const getMetricSubtitle = () => {
-    switch (selectedMetric) {
-      case "throughput":
-        return "Average vehicles per hour"
-      case "arrivalsOnGreen":
-        return "Arrivals on Green"
-      case "progressionRatio":
-        return "Progression Ratio"
-      case "spillbackRatio":
-        return "Spillback Ratio"
-      case "peakPeriodSplitFailures":
-        return "Peak Period Split Failures"
-      case "offPeakSplitFailures":
-        return "Off-Peak Split Failures"
-      case "travelTimeIndex":
-        return "Travel Time Index"
-      case "planningTimeIndex":
-        return "Planning Time Index"
-      case "dailyTrafficVolumes":
-        return "Average daily traffic"
-      default:
-        return ""
-    }
+    return chartTitles[selectedMetric]["metricCardTitle"]
+    // switch (selectedMetric) {
+    //   case "throughput":
+    //     return "Average vehicles per hour"
+    //   case "arrivalsOnGreen":
+    //     return "Arrivals on Green"
+    //   case "progressionRatio":
+    //     return "Progression Ratio"
+    //   case "spillbackRatio":
+    //     return "Spillback Ratio"
+    //   case "peakPeriodSplitFailures":
+    //     return "Peak Period Split Failures"
+    //   case "offPeakSplitFailures":
+    //     return "Off-Peak Split Failures"
+    //   case "travelTimeIndex":
+    //     return "Travel Time Index"
+    //   case "planningTimeIndex":
+    //     return "Planning Time Index"
+    //   case "dailyTrafficVolumes":
+    //     return "Traffic Volume [veh/day]"
+    //   default:
+    //     return ""
+    // }
   }
+
+  console.log('metricData', metricData);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -490,8 +498,8 @@ export default function Operations() {
                         isRawTraces={true}
                         loading={false}
                         height="100%"
-                        center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={8}
+                        // center={{ lat: 33.789, lon: -84.388 }}
+                        zoom={6}
                         renderLegend={getMapLegend}
                       />
                     </>
@@ -509,87 +517,17 @@ export default function Operations() {
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
                   <Grid size={{xs: 12, md: 4}}>
-                    <Plot
-                      data={[locationBarData as any]}
-                      layout={{
-                        autosize: true,
-                        height: 450,
-                        margin: { l: 150, r: 10, t: 10, b: 50 },
-                        yaxis: {
-                          title: "",
-                          automargin: true,
-                          tickfont: { size: 10 },
-                        },
-                        xaxis: {
-                          title:
-                            selectedMetric === "throughput"
-                              ? "Throughput (vph)"
-                              : selectedMetric === "arrivalsOnGreen"
-                                ? "Arrivals on Green"
-                                : "Value",
-                          dtick: selectedMetric === "throughput" ? 500 
-                                : selectedMetric === "arrivalsOnGreen" ? 0.2 
-                                : selectedMetric === "progressionRatio" ? 0.5 
-                                : selectedMetric === "spillbackRatio" ? 0.2 
-                                : selectedMetric === "peakPeriodSplitFailures" ? 0.1 
-                                : selectedMetric === "offPeakSplitFailures" ? 0.05 
-                                : selectedMetric === "travelTimeIndex" ? 0.2 
-                                : selectedMetric === "planningTimeIndex" ? 0.5 
-                                : undefined,
-                          tickformat: ["arrivalsOnGreen", "spillbackRatio", "peakPeriodSplitFailures", "offPeakSplitFailures"].includes(selectedMetric) 
-                            ? '.1%' 
-                            : undefined,
-                          range: selectedMetric === "travelTimeIndex" 
-                                  ? [1, 2.2] 
-                                  : selectedMetric === "planningTimeIndex" 
-                                  ? [1, 3] 
-                                  : undefined,
-                          autorange: !["travelTimeIndex", "planningTimeIndex"].includes(selectedMetric),
-                        },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
+                    <LocationBarChart 
+                      data={locationBarData}
+                      selectedMetric={selectedMetric}
                     />
                   </Grid>
 
                   {/* Time Series Chart */}
                   <Grid size={{xs: 12, md: 8}}>
-                    <Plot
-                      data={timeSeriesChartData() as any}
-                      layout={{
-                        autosize: true,
-                        height: 450,
-                        margin: { l: 50, r: 10, t: 10, b: 50 },
-                        xaxis: { title: "Time Period" },
-                        yaxis: {
-                          title:
-                            selectedMetric === "throughput"
-                              ? "Vehicles per Hour Trend"
-                              : selectedMetric === "arrivalsOnGreen"
-                                ? "Weekly Trend"
-                                : "Trend",
-                          dtick: selectedMetric === "throughput" ? 500 
-                                : selectedMetric === "arrivalsOnGreen" ? 0.2 
-                                : selectedMetric === "progressionRatio" ? 0.5 
-                                : selectedMetric === "spillbackRatio" ? 0.2 
-                                : selectedMetric === "peakPeriodSplitFailures" ? 0.1 
-                                : selectedMetric === "offPeakSplitFailures" ? 0.05 
-                                : selectedMetric === "travelTimeIndex" ? 0.2 
-                                : selectedMetric === "planningTimeIndex" ? 0.5 
-                                : undefined,
-                          tickformat: ["arrivalsOnGreen", "spillbackRatio", "peakPeriodSplitFailures", "offPeakSplitFailures"].includes(selectedMetric) 
-                            ? '.1%' 
-                            : undefined,
-                          range: selectedMetric === "travelTimeIndex" 
-                                  ? [1, 2.2] 
-                                  : selectedMetric === "planningTimeIndex" 
-                                  ? [1, 3] 
-                                  : undefined,
-                          autorange: !["travelTimeIndex", "planningTimeIndex"].includes(selectedMetric),
-                        },
-                        showlegend: false,
-                        legend: { x: 0, y: 1 },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
+                    <TimeSeriesChart 
+                      data={timeSeriesChartData()}
+                      selectedMetric={selectedMetric}
                     />
                   </Grid>
                 </Grid>

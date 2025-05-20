@@ -2,6 +2,7 @@ import { apiClient } from './apiClient';
 import {
     FilterParams,
     MetricData,
+    MetricsAverage,
     MetricsFilterRequest,
     MetricsTrendRequest,
     MonthAverage,
@@ -37,7 +38,7 @@ export const metricsApi = {
     // Metrics Average - POST request to /metrics/average
     getMetricsAverage: (params: MetricsFilterRequest, filterParams: FilterParams) => {
         const { source, measure, dashboard = false } = params;
-        return apiClient.post<number>(
+        return apiClient.post<MetricsAverage[]>(
             `/metrics/average?source=${source}&measure=${measure}&dashboard=${dashboard}`,
             filterParams
         );

@@ -20,11 +20,11 @@ export default function SignalInfo() {
     dispatch(fetchAllSignals());
   }, []);
 
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -397,18 +397,6 @@ export default function SignalInfo() {
             </TableRow>
           ))}
           </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50, 100]}
-                count={signals.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </TableRow>
-          </TableFooter>
         </Table>
       </TableContainer>
 
@@ -436,13 +424,14 @@ export default function SignalInfo() {
         </Button>
 
         {/* Pagination Controls */}
-        <Box sx={{ display: "flex", alignItems: "center" }}>
+        {/* <Box sx={{ display: "flex", alignItems: "center" }}>
           <Typography variant="body2" sx={{ mr: 1 }}>
             Items per page:
           </Typography>
           <Select
-            value={10}
+            value={rowsPerPage}
             size="small"
+            onChange={(e) => handleChangeRowsPerPage(e)}
             sx={{
               minWidth: 70,
               height: 32,
@@ -458,24 +447,32 @@ export default function SignalInfo() {
           </Select>
 
           <Typography variant="body2" sx={{ mr: 2 }}>
-            0 of 0
+            {signals.length > 0 ? `${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, signals.length)} of ${signals.length}` : "0-0 of 0"}
           </Typography>
 
           <Box sx={{ display: "flex" }}>
-            <IconButton size="small" disabled>
+            <IconButton size="small" disabled={page === 0} onClick={(e) => handleChangePage(e, 0)}>
               <FirstPageIcon />
             </IconButton>
-            <IconButton size="small" disabled>
+            <IconButton size="small" disabled={page === 0} onClick={(e) => handleChangePage(e, page - 1)}>
               <KeyboardArrowLeft />
             </IconButton>
-            <IconButton size="small" disabled>
+            <IconButton
+              size="small"
+              disabled={page >= Math.ceil(signals.length / rowsPerPage) - 1}
+              onClick={(e) => handleChangePage(e, page + 1)}
+            >
               <KeyboardArrowRight />
             </IconButton>
-            <IconButton size="small" disabled>
+            <IconButton
+              size="small"
+              disabled={page >= Math.ceil(signals.length / rowsPerPage) - 1}
+              onClick={(e) => handleChangePage(e, Math.ceil(signals.length / rowsPerPage) - 1)}
+            >
               <LastPageIcon />
             </IconButton>
           </Box>
-        </Box>
+        </Box> */}
       </Box>
     </Box>
   )

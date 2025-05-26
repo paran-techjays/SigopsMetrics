@@ -1,57 +1,55 @@
-from fastapi import APIRouter, Request
+from jinja2 import Environment, FileSystemLoader
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pathlib import Path
 import os
-import mimetypes
 
 router = APIRouter()
-
-# Ensure JavaScript files are served with the correct MIME type
-mimetypes.add_type("application/javascript", ".js")
-mimetypes.add_type("text/css", ".css")
 
 # Get the absolute path to the frontend/dist directory
 frontend_dist_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
-# Instead of mounting, serve each file type directly
-@router.get("/assets/{file_path:path}", include_in_schema=False)
-async def serve_static(file_path: str):
-    file_full_path = frontend_dist_path / "assets" / file_path
-    
-    # Check if file exists
-    if not os.path.isfile(file_full_path):
-        return {"error": "File not found"}
-    
-    # Get the appropriate MIME type based on file extension
-    file_extension = os.path.splitext(file_full_path)[1].lower()
-    
-    # Explicit handling for common file types
-    if file_extension == ".js":
-        media_type = "application/javascript"
-    elif file_extension == ".css":
-        media_type = "text/css"
-    elif file_extension == ".png":
-        media_type = "image/png"
-    elif file_extension == ".svg":
-        media_type = "image/svg+xml"
-    elif file_extension == ".jpg" or file_extension == ".jpeg":
-        media_type = "image/jpeg"
-    else:
-        # Use Python's mimetypes as fallback
-        media_type = mimetypes.guess_type(file_full_path)[0] or "application/octet-stream"
-    
-    return FileResponse(str(file_full_path), media_type=media_type)
+# Setup Jinja2 template engine
+templates_env = Environment(loader=FileSystemLoader(frontend_dist_path))
+print("templates_env", templates_env)
 
-# Serve the index.html file for all routes to support client-side routing
+# Mount static files for assets
+router.mount("/assets", StaticFiles(directory=frontend_dist_path / "assets"), name="assets")
+
+# @router.get("/", include_in_schema=False)
+# async def serve_root(request: Request):
+#     """Serve the main index.html page"""
+#     try:
+#         template = templates_env.get_template("index.html")
+#         print("template", template)
+#         rendered_html = template.render(
+#             api_url=os.getenv("API_BASE_URL", "https://sigopsmetrics-api-dev.dot.ga.gov"),
+#             feature_flag=os.getenv("FEATURE_FLAG", "false")
+#         )
+#         return HTMLResponse(content=rendered_html, media_type="text/html")
+#     except Exception as e:
+#         return HTMLResponse(content=f"Template error: {str(e)}", status_code=500)
+
 @router.get("/", include_in_schema=False)
 @router.get("/{full_path:path}", include_in_schema=False)
-async def serve_frontend(request: Request, full_path: str = ""):
-    # Skip asset paths (they should be handled by serve_static)
-    if full_path.startswith("assets/"):
-        return {"error": "File not found"}
+async def serve_frontend(request: Request, full_path: str):
+    """Serve frontend routes (SPA fallback to index.html)"""
+    # Check if it's a request for a specific file (has file extension)
+    if "." in full_path:
+        # Try to serve the actual file
+        file_path = frontend_dist_path / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
     
-    return FileResponse(str(frontend_dist_path / "index.html"), media_type="text/html")
-
-
-
+    # For routes without file extensions, serve index.html (SPA routing)
+    try:
+        template = templates_env.get_template("index.html")
+        rendered_html = template.render(
+            env=os.getenv("ENV", "PROD"),
+        )
+        return HTMLResponse(content=rendered_html, media_type="text/html")
+    except Exception as e:
+        return HTMLResponse(content=f"Template error: {str(e)}", status_code=500)

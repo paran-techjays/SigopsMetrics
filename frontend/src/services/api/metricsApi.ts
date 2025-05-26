@@ -9,11 +9,11 @@ import {
     Signal,
     TrendData,
 } from '../../types/api.types';
-import AppConfig from '../../utils/appConfig';
+import AppConfig from '../../../appConfig';
 
-const API_BASE_URL = AppConfig.settings.API_PATH;
+const API_BASE_URL = AppConfig.API_PATH;
 
-console.log('API_BASE_URL', API_BASE_URL);
+console.log('API_BASE_URL', API_BASE_URL);  
 
 export const metricsApi = {
     // Signals

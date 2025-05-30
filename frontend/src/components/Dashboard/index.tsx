@@ -261,7 +261,7 @@ export default function Dashboard() {
       const joinedData = signals
         .map(signal => {
           const metricItem = signalFilterData.find((md: any) => md.label === signal.signalID);
-          if (metricItem) {
+          if (metricItem && metricItem.avg !== 0) { // Only include non-zero values
             return {
               ...signal,
               [settings.field]: metricItem.avg

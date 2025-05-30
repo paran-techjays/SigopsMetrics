@@ -19,7 +19,6 @@ import LocationBarChart from "../../components/charts/LocationBarChart"
 import TimeSeriesChart from "../../components/charts/TimeSeriesChart"
 import { metricApiKeys } from "../../services/api"
 import mapSettings from "../../utils/mapSettings"
-import AppConfig from '../../utils/appConfig'
 import { useAppDispatch, useAppSelector } from '../../hooks/useTypedSelector'
 import { 
   fetchStraightAverage,
@@ -43,8 +42,6 @@ const metrics = [
   { id: "communicationUptime", label: "Communication Uptime", key: metricApiKeys.communicationUptime },
 ]
 
-// Base API URL
-const API_BASE_URL = AppConfig.settings.API_PATH;
 
 // Default filter payload
 const defaultPayload = {
@@ -96,13 +93,8 @@ interface TimeSeriesData {
   corridor: string;
   zone_Group: string | null;
   month: string;
-  uptime?: string;
-  delta?: string;
-  [metricApiKeys.detectorUptime]: string;
-  [metricApiKeys.pedestrianPushbuttonActivity]: string;
-  [metricApiKeys.pedestrianPushbuttonUptime]: string;
-  [metricApiKeys.cctvUptime]: string;
-  [metricApiKeys.communicationUptime]: string;
+  uptime: string;
+  delta: string;
   [key: string]: string | number | null;
 }
 
@@ -127,6 +119,7 @@ export default function Maintenance() {
   // State for selected metric
   const [selectedMetric, setSelectedMetric] = useState("detectorUptime");
   const [selectedMetricKey, setSelectedMetricKey] = useState("du");
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   
   // Local state for component-specific data
   const [locationMetrics, setLocationMetrics] = useState<LocationMetric[]>([]);
@@ -212,7 +205,9 @@ export default function Maintenance() {
       // Create a map of signal IDs to metric values
       const metricsMap: { [key: string]: number } = {};
       signalsFilterAverage.data.forEach((item: any) => {
-        metricsMap[item.label] = item.avg;
+        if (item.avg !== 0) { // Only include non-zero values
+          metricsMap[item.label] = item.avg;
+        }
       });
       
       // Prepare map data
@@ -224,7 +219,8 @@ export default function Maintenance() {
           lon: signal.longitude,
           name: `${signal.mainStreetName || ''} ${signal.sideStreetName ? '@ ' + signal.sideStreetName : ''}`,
           value: metricsMap[signal.signalID || ''] || 0
-        }));
+        }))
+        .filter(point => point.value !== 0); // Filter out points with value 0
       setMapData(mapPointsData);
     }
   }, [signals, signalsFilterAverage.data, filtersApplied]);
@@ -234,8 +230,33 @@ export default function Maintenance() {
     setSelectedMetric(newValue);
   }
 
+  // Handle location selection
+  const handleLocationClick = (location: string) => {
+    setSelectedLocation(location === selectedLocation ? null : location);
+  };
+
+  // Create a mapping of locations to colors that will be consistent between charts
+  const getLocationColors = () => {
+    const colors = [
+      '#1f77b4', // blue
+      '#ff7f0e', // orange
+      '#2ca02c', // green
+      '#d62728', // red
+      '#9467bd', // purple
+      '#8c564b', // brown
+      '#e377c2', // pink
+      '#7f7f7f', // gray
+      '#bcbd22', // yellow-green
+      '#17becf'  // cyan
+    ];
+    const uniqueLocations = Array.from(new Set(locationMetrics.map(item => item.label)));
+    return Object.fromEntries(uniqueLocations.map((location, index) => [location, colors[index % colors.length]]));
+  };
+
+  const locationColors = getLocationColors();
+
   // Format the metric value for display
-  const formatMetricValue = (value: number | string, unit?: string) => {
+  const formatMetricValue = (value: number | string | null) => {
     if (typeof value === "number") {
       // Format based on the metric type
       if (selectedMetric === "detectorUptime" || 
@@ -249,7 +270,7 @@ export default function Maintenance() {
         return Math.round(value).toLocaleString()
       }
     }
-    return value
+    return value || "N/A"
   }
 
   // Check if this is a percentage-based metric
@@ -265,7 +286,10 @@ export default function Maintenance() {
     type: "bar",
     orientation: "h",
     marker: {
-      // color: "#6c757d",
+      color: locationMetrics.map(item => locationColors[item.label]),
+      opacity: locationMetrics.map(item => 
+        selectedLocation ? (item.label === selectedLocation ? 1 : 0.5) : 1
+      )
     },
     hovertemplate: isPercentMetric
       ? '<b>%{y}</b><br>Value: %{x:.1%}<extra></extra>'
@@ -278,6 +302,11 @@ export default function Maintenance() {
     const locationGroups: { [key: string]: { x: string[]; y: number[] } } = {}
     
     timeSeriesData.forEach((item) => {
+      // If a location is selected, only process data for that location
+      if (selectedLocation && item.corridor !== selectedLocation) {
+        return;
+      }
+
       if (!locationGroups[item.corridor]) {
         locationGroups[item.corridor] = { x: [], y: [] }
       }
@@ -310,7 +339,10 @@ export default function Maintenance() {
       type: "scatter",
       mode: "lines",
       name: location,
-      line: { width: 1 },
+      line: { 
+        width: 2,
+        color: locationColors[location]
+      },
       hovertemplate: isPercentMetric
         ? '<b>%{text}</b><br>Date: %{x}<br>Value: %{y:.1%}<extra></extra>'
         : '<b>%{text}</b><br>Date: %{x}<br>Value: %{y}<extra></extra>',
@@ -664,6 +696,18 @@ export default function Maintenance() {
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                       <CircularProgress />
                     </Box>
+                  ) : selectedMetric === "cctvUptime" ? (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      height: '100%',
+                      textAlign: 'center'
+                    }}>
+                      {/* <Typography variant="h6" color="text.secondary">
+                        Map view is not available for CCTV Uptime
+                      </Typography> */}
+                    </Box>
                   ) : (
                     <>
                       <MapBox 
@@ -672,7 +716,7 @@ export default function Maintenance() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={6}
+                        zoom={11}
                         renderLegend={getMapLegend}
                       />
                     </>
@@ -690,11 +734,20 @@ export default function Maintenance() {
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
                   <Grid size={{xs: 12, md: 4}}>
-                    <LocationBarChart
-                      data={locationBarData as any}
-                      selectedMetric={selectedMetric}
-                      height={500}
-                    />
+                    <Box sx={{ 
+                      height: "500px", 
+                      display: "flex", 
+                      flexDirection: "column",
+                      overflow: "hidden"
+                    }}>
+                      <LocationBarChart
+                        data={locationBarData as any}
+                        selectedMetric={selectedMetric}
+                        selectedLocation={selectedLocation}
+                        onLocationClick={handleLocationClick}
+                        height={Math.max(500, locationMetrics.length * 10)} // Adjust height based on number of locations
+                      />
+                    </Box>
                   </Grid>
 
                   {/* Time Series Chart */}
@@ -703,6 +756,7 @@ export default function Maintenance() {
                       data={timeSeriesChartData() as any}
                       selectedMetric={selectedMetric}
                       height={500}
+                      // showLegend={!selectedLocation}
                     />
                   </Grid>
                 </Grid>

@@ -54,6 +54,7 @@ export default function Operations() {
 
   // State for selected metric
   const [selectedMetric, setSelectedMetric] = useState("dailyTrafficVolumes")
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
 
   // State for data
   const [loading, setLoading] = useState(true)
@@ -63,6 +64,31 @@ export default function Operations() {
   const [mapData, setMapData] = useState<MapPoint[]>([])
   const commonFilterParams = useSelector(selectFilterParams);
   const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
+
+  // Plotly's default color palette
+  const getLocationColor = (index: number) => {
+    const colors = [
+      '#1f77b4', // blue
+      '#ff7f0e', // orange
+      '#2ca02c', // green
+      '#d62728', // red
+      '#9467bd', // purple
+      '#8c564b', // brown
+      '#e377c2', // pink
+      '#7f7f7f', // gray
+      '#bcbd22', // yellow-green
+      '#17becf'  // cyan
+    ];
+    return colors[index % colors.length];
+  };
+
+  // Create a mapping of locations to colors that will be consistent between charts
+  const getLocationColors = () => {
+    const uniqueLocations = Array.from(new Set(locationMetrics.map(item => item.location)));
+    return Object.fromEntries(uniqueLocations.map((location, index) => [location, getLocationColor(index)]));
+  };
+
+  const locationColors = getLocationColors();
 
   // Fetch data when filters or selected metric changes
   useEffect(() => {
@@ -138,20 +164,32 @@ export default function Operations() {
     type: "bar",
     orientation: "h",
     marker: {
-      color: "#0070ed",
+      color: locationMetrics.map(item => locationColors[item.location]),
+      opacity: locationMetrics.map(item => 
+        selectedLocation ? (item.location === selectedLocation ? 1 : 0.5) : 1
+      )
     },
     hovertemplate: isPercentMetric
       ? '<b>%{y}</b><br>Value: %{x:.1%}<extra></extra>'
       : '<b>%{y}</b><br>Value: %{x}<extra></extra>',
   }
 
+  // Handle bar click in location chart
+  const handleLocationClick = (location: string) => {
+    setSelectedLocation(location === selectedLocation ? null : location);
+  };
+
   // Prepare data for the time series chart
   const timeSeriesChartData = () => {
     // Group by location
     const locationGroups: { [key: string]: { x: string[]; y: number[] } } = {}
-    console.log('timeSeriesData', timeSeriesData);
     
     timeSeriesData.forEach((item) => {
+      // If a location is selected, only process data for that location
+      if (selectedLocation && item.location !== selectedLocation) {
+        return;
+      }
+
       if (!locationGroups[item.location]) {
         locationGroups[item.location] = { x: [], y: [] }
       }
@@ -169,7 +207,10 @@ export default function Operations() {
       type: "scatter",
       mode: "lines",
       name: location,
-      line: { width: 1 },
+      line: { 
+        width: 2,
+        color: locationColors[location]
+      },
       hovertemplate: isPercentMetric
         ? '<b>%{text}</b><br>Date: %{x}<br>Value: %{y:.1%}<extra></extra>'
         : '<b>%{text}</b><br>Date: %{x}<br>Value: %{y}<extra></extra>',
@@ -206,33 +247,12 @@ export default function Operations() {
   } : 
   {
     type: "scattermapbox",
-    lat: mapData.map((point) => point.lat),
-    lon: mapData.map((point) => point.lon),
+    lat: mapData.filter(point => point.value !== 0).map((point) => point.lat),
+    lon: mapData.filter(point => point.value !== 0).map((point) => point.lon),
     mode: "markers",
     marker: {
-      // size: mapData.map((point) => {
-      //   // Scale marker size based on value
-      //   const min = 5;
-      //   const max = 15;
-      //   const value = point.value;
-
-      //   // Make sure we don't scale unavailable data points
-      //   if (value === -1) {
-      //     return min;
-      //   }
-
-      //   if (selectedMetric === "throughput") {
-      //     // Scale for throughput (1000-8000)
-      //     return min + Math.min(((value - 1000) / 7000) * (max - min), max)
-      //   } else if (selectedMetric === "arrivalsOnGreen") {
-      //     // Scale for percentage (0-100)
-      //     return min + Math.min((value / 100) * (max - min), max)
-      //   } else {
-      //     return 8 // Default size
-      //   }
-      // }),
       size: 6,
-      color: mapData.map((point) => {
+      color: mapData.filter(point => point.value !== 0).map((point) => {
         // Color based on value using mapSettings
         const settingsKey = metricToSettingsMap[selectedMetric];
         const settings = settingsKey ? mapSettings[settingsKey] : null;
@@ -261,7 +281,7 @@ export default function Operations() {
       }),
       opacity: 0.8,
     },
-    text: mapData.map((point) => {
+    text: mapData.filter(point => point.value !== 0).map((point) => {
       const apiKey = metricApiKeys[selectedMetric];
       // Check if data is unavailable
       if (point.value === -1) {
@@ -315,56 +335,12 @@ export default function Operations() {
 
   // Get the title for the time series chart
   const getTimeSeriesTitle = () => {
-    return chartTitles[selectedMetric]["bottomChartTitle"]
-    // switch (selectedMetric) {
-    //   case "throughput":
-    //     return "Throughput (peak veh/hr)"
-    //   case "arrivalsOnGreen":
-    //     return "Arrivals on Green [%]"
-    //   case "progressionRatio":
-    //     return "Progression Ratio"
-    //   case "spillbackRatio":
-    //     return "Spillback Ratio"
-    //   case "peakPeriodSplitFailures":
-    //     return "Peak Period Split Failures"
-    //   case "offPeakSplitFailures":
-    //     return "Off-Peak Split Failures"
-    //   case "travelTimeIndex":
-    //     return "Travel Time Index"
-    //   case "planningTimeIndex":
-    //     return "Planning Time Index"
-    //   case "dailyTrafficVolumes":
-    //     return "Traffic Volume [veh/day]"
-    //   default:
-    //     return "Metric Trend"
-    // }
+    return chartTitles[selectedMetric as keyof typeof chartTitles]["bottomChartTitle"]
   }
 
   // Get the subtitle for the metric display
   const getMetricSubtitle = () => {
-    return chartTitles[selectedMetric]["metricCardTitle"]
-    // switch (selectedMetric) {
-    //   case "throughput":
-    //     return "Average vehicles per hour"
-    //   case "arrivalsOnGreen":
-    //     return "Arrivals on Green"
-    //   case "progressionRatio":
-    //     return "Progression Ratio"
-    //   case "spillbackRatio":
-    //     return "Spillback Ratio"
-    //   case "peakPeriodSplitFailures":
-    //     return "Peak Period Split Failures"
-    //   case "offPeakSplitFailures":
-    //     return "Off-Peak Split Failures"
-    //   case "travelTimeIndex":
-    //     return "Travel Time Index"
-    //   case "planningTimeIndex":
-    //     return "Planning Time Index"
-    //   case "dailyTrafficVolumes":
-    //     return "Traffic Volume [veh/day]"
-    //   default:
-    //     return ""
-    // }
+    return chartTitles[selectedMetric as keyof typeof chartTitles]["metricCardTitle"]
   }
 
   console.log('metricData', metricData);
@@ -491,6 +467,18 @@ export default function Operations() {
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                       <CircularProgress />
                     </Box>
+                  ) : selectedMetric === "travelTimeIndex" || selectedMetric === "planningTimeIndex" ? (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      height: '100%',
+                      textAlign: 'center'
+                    }}>
+                      {/* <Typography variant="h6" color="text.secondary">
+                        Map view is not available for {selectedMetric === "travelTimeIndex" ? "Travel Time Index" : "Planning Time Index"}
+                      </Typography> */}
+                    </Box>
                   ) : (
                     <>
                       <MapBox 
@@ -498,8 +486,7 @@ export default function Operations() {
                         isRawTraces={true}
                         loading={false}
                         height="100%"
-                        // center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={6}
+                        zoom={11}
                         renderLegend={getMapLegend}
                       />
                     </>
@@ -517,10 +504,19 @@ export default function Operations() {
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
                   <Grid size={{xs: 12, md: 4}}>
-                    <LocationBarChart 
-                      data={locationBarData}
-                      selectedMetric={selectedMetric}
-                    />
+                    <Box sx={{ 
+                      height: "500px", 
+                      display: "flex", 
+                      flexDirection: "column"
+                    }}>
+                      <LocationBarChart 
+                        data={locationBarData}
+                        selectedMetric={selectedMetric}
+                        selectedLocation={selectedLocation}
+                        onLocationClick={handleLocationClick}
+                        height={Math.max(500, locationMetrics.length * 10)} // Adjust height based on number of locations
+                      />
+                    </Box>
                   </Grid>
 
                   {/* Time Series Chart */}
@@ -528,6 +524,7 @@ export default function Operations() {
                     <TimeSeriesChart 
                       data={timeSeriesChartData()}
                       selectedMetric={selectedMetric}
+                      // showLegend={!selectedLocation}
                     />
                   </Grid>
                 </Grid>

@@ -7,13 +7,17 @@ interface LocationBarChartProps {
   selectedMetric: string;
   height?: number;
   width?: string | number;
+  selectedLocation?: string | null;
+  onLocationClick?: (location: string) => void;
 }
 
 const LocationBarChart: React.FC<LocationBarChartProps> = ({
   data,
   selectedMetric,
   height = 450,
-  width = "100%"
+  width = "100%",
+  selectedLocation,
+  onLocationClick
 }) => {
   const getAxisTitle = () => {
     switch (selectedMetric) {
@@ -60,30 +64,67 @@ const LocationBarChart: React.FC<LocationBarChartProps> = ({
     return !["travelTimeIndex", "planningTimeIndex"].includes(selectedMetric);
   };
 
+  // Modify the data to include different colors for selected location
+  const plotData = {
+    ...data,
+    marker: {
+      ...data.marker,
+    },
+    width: Array(data.y.length).fill(0.8)  // Set bar width to 0.8 for all bars
+  };
+
+  const handleClick = (event: any) => {
+    if (event.points && event.points[0] && onLocationClick) {
+      onLocationClick(event.points[0].y);
+    }
+  };
+
   return (
     <Plot
-      data={[data]}
+      data={[plotData]}
       layout={{
         autosize: true,
-        height,
+        height: Math.max(height, data.y.length * 10), // Adjust height based on number of locations
         margin: { l: 150, r: 10, t: 10, b: 50 },
         yaxis: {
           title: "",
           automargin: true,
           tickfont: { size: 10 },
+          tickmode: "array",
+          ticktext: data.y,
+          tickvals: data.y,
+          showticklabels: true,
+          side: "left",
+          fixedrange: true
         },
         xaxis: {
           title: {
-            text: chartTitles[selectedMetric]["locationBarChartTitle"],
+            text: chartTitles[selectedMetric as keyof typeof chartTitles]["locationBarChartTitle"],
             standoff: 40,
           },
           dtick: getDtick(),
           tickformat: getTickFormat(),
           range: getRange(),
           autorange: getAutorange(),
+          fixedrange: true
         },
+        bargap: 0.15,
+        showlegend: false,
+        plot_bgcolor: "white",
+        paper_bgcolor: "white"
       }}
-      style={{ width, height: "100%" }}
+      config={{
+        displayModeBar: false,
+        scrollZoom: false
+      }}
+      style={{ 
+        width, 
+        height: "100%",
+        minHeight: "200px",
+        overflowY: "auto",
+        overflowX: "hidden"
+      }}
+      onClick={handleClick}
     />
   );
 };

@@ -2,17 +2,18 @@ import { apiClient } from './apiClient';
 import {
     FilterParams,
     MetricData,
+    MetricsAverage,
     MetricsFilterRequest,
     MetricsTrendRequest,
     MonthAverage,
     Signal,
     TrendData,
 } from '../../types/api.types';
-import AppConfig from '../../utils/appConfig';
+import AppConfig from '../../../appConfig';
 
-const API_BASE_URL = AppConfig.settings.API_PATH;
+const API_BASE_URL = AppConfig.API_PATH;
 
-console.log('API_BASE_URL', API_BASE_URL);
+console.log('API_BASE_URL', API_BASE_URL);  
 
 export const metricsApi = {
     // Signals
@@ -37,7 +38,7 @@ export const metricsApi = {
     // Metrics Average - POST request to /metrics/average
     getMetricsAverage: (params: MetricsFilterRequest, filterParams: FilterParams) => {
         const { source, measure, dashboard = false } = params;
-        return apiClient.post<number>(
+        return apiClient.post<MetricsAverage[]>(
             `/metrics/average?source=${source}&measure=${measure}&dashboard=${dashboard}`,
             filterParams
         );

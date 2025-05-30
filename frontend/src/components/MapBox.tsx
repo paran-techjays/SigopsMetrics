@@ -213,7 +213,7 @@ const MapBox: FC<MapBoxProps> = ({
   useEffect(() => {
     if (loading || !signals || signals.length === 0) return;
 
-    if (isRawTraces && data.length > 0) {
+    if (isRawTraces && data?.length > 0) {
       // Just use the provided traces directly
       setMapData((prevMapData) => {
         const newData = (data as MapTrace[]).map(trace => ({ 

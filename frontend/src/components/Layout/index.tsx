@@ -10,10 +10,19 @@ import SideNav from "../SideNav"
 import FilterSidebar from "../FilterSidebar"
 import IconButton from "@mui/material/IconButton"
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import { useLocation } from 'react-router-dom';
 
 const expandedDrawerWidth = 200
 const collapsedDrawerWidth = 65
 const filterWidth = 300
+
+// List of routes where filter should be shown
+const FILTER_ROUTES = [
+  '/',
+  '/operations',
+  '/maintenance',
+  '/summary-trend'
+];
 
 const Main = styled("main", { shouldForwardProp: (prop) => prop !== "sideNavWidth" && prop !== "filterOpen" })<{
   sideNavWidth?: number
@@ -46,6 +55,10 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [sideNavExpanded, setSideNavExpanded] = useState(true)
   const [filterOpen, setFilterOpen] = useState(false)
+  const location = useLocation();
+
+  // Check if current route should show filter
+  const shouldShowFilter = FILTER_ROUTES.some(route => location.pathname.startsWith(route));
 
   const handleSideNavToggle = () => {
     setSideNavExpanded(!sideNavExpanded)
@@ -63,38 +76,43 @@ export default function Layout({ children }: LayoutProps) {
       <SideNav open={true} expanded={sideNavExpanded} width={sideNavWidth} />
       <Main sideNavWidth={sideNavWidth} filterOpen={filterOpen}>
         <Box sx={{ pt: 8, height: "calc(100vh - 64px)", overflow: "auto" }}>
-          {/* Filter Button - Absolutely positioned in top right corner */}
-          <Box sx={{ 
-            position: 'absolute', 
-            top: '70px', 
-            right: filterOpen ? `${filterWidth + 16}px` : '16px', 
-            zIndex: 1100,
-            transition: (theme) => theme.transitions.create(['right'], {
-              easing: theme.transitions.easing.easeOut,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-          }}>
-            <IconButton 
-              color="primary" 
-              onClick={handleFilterToggle}
-              sx={{ 
-                bgcolor: 'white', 
-                boxShadow: 2,
-                '&:hover': {
-                  bgcolor: 'white',
-                  opacity: 0.9,
-                } 
-              }}
-              size="large"
-              aria-label="open filters"
-            >
-              <FilterAltIcon />
-            </IconButton>
-          </Box>
+          {/* Filter Button - Only show for specific routes */}
+          {shouldShowFilter && (
+            <Box sx={{ 
+              position: 'absolute', 
+              top: '70px', 
+              right: filterOpen ? `${filterWidth + 16}px` : '16px', 
+              zIndex: 1100,
+              transition: (theme) => theme.transitions.create(['right'], {
+                easing: theme.transitions.easing.easeOut,
+                duration: theme.transitions.duration.enteringScreen,
+              }),
+            }}>
+              <IconButton 
+                color="primary" 
+                onClick={handleFilterToggle}
+                sx={{ 
+                  bgcolor: 'white', 
+                  boxShadow: 2,
+                  '&:hover': {
+                    bgcolor: 'white',
+                    opacity: 0.9,
+                  } 
+                }}
+                size="large"
+                aria-label="open filters"
+              >
+                <FilterAltIcon />
+              </IconButton>
+            </Box>
+          )}
           {children}
         </Box>
       </Main>
-      <FilterSidebar open={filterOpen} width={filterWidth} onClose={handleFilterToggle} />
+      {/* Only render FilterSidebar for specific routes */}
+      {shouldShowFilter && (
+        <FilterSidebar open={filterOpen} width={filterWidth} onClose={handleFilterToggle} />
+      )}
     </Box>
   )
 }

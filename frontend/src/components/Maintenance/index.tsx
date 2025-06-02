@@ -15,9 +15,10 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward"
 import RemoveIcon from "@mui/icons-material/Remove"
 import Plot from "react-plotly.js"
 import MapBox from "../../components/MapBox"
+import LocationBarChart from "../../components/charts/LocationBarChart"
+import TimeSeriesChart from "../../components/charts/TimeSeriesChart"
 import { metricApiKeys } from "../../services/api"
 import mapSettings from "../../utils/mapSettings"
-import AppConfig from '../../utils/appConfig'
 import { useAppDispatch, useAppSelector } from '../../hooks/useTypedSelector'
 import { 
   fetchStraightAverage,
@@ -27,6 +28,10 @@ import {
   fetchSignalsFilterAverage
 } from '../../store/slices/metricsSlice'
 import { MetricsFilterRequest } from '../../types/api.types'
+import { useSelector } from "react-redux"
+import { selectFilterParams } from "../../store/slices/filterSlice"
+import { RootState } from "../../store"
+import chartTitles from "../../constants/mapData"
 
 // Define the available metrics
 const metrics = [
@@ -37,8 +42,6 @@ const metrics = [
   { id: "communicationUptime", label: "Communication Uptime", key: metricApiKeys.communicationUptime },
 ]
 
-// Base API URL
-const API_BASE_URL = AppConfig.settings.API_PATH;
 
 // Default filter payload
 const defaultPayload = {
@@ -90,13 +93,8 @@ interface TimeSeriesData {
   corridor: string;
   zone_Group: string | null;
   month: string;
-  uptime?: string;
-  delta?: string;
-  [metricApiKeys.detectorUptime]: string;
-  [metricApiKeys.pedestrianPushbuttonActivity]: string;
-  [metricApiKeys.pedestrianPushbuttonUptime]: string;
-  [metricApiKeys.cctvUptime]: string;
-  [metricApiKeys.communicationUptime]: string;
+  uptime: string;
+  delta: string;
   [key: string]: string | number | null;
 }
 
@@ -121,12 +119,16 @@ export default function Maintenance() {
   // State for selected metric
   const [selectedMetric, setSelectedMetric] = useState("detectorUptime");
   const [selectedMetricKey, setSelectedMetricKey] = useState("du");
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   
   // Local state for component-specific data
   const [locationMetrics, setLocationMetrics] = useState<LocationMetric[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
   const [mapData, setMapData] = useState<MapPoint[]>([]);
 
+  const commonFilterParams = useSelector(selectFilterParams);
+  const filtersApplied = useSelector((state: RootState) => state.filter.filtersApplied);
+  console.log("filtersApplied", filtersApplied);
   // Redux state
   const dispatch = useAppDispatch();
   const { 
@@ -163,21 +165,38 @@ export default function Maintenance() {
         };
         
         // Dispatch actions to fetch data
-        dispatch(fetchStraightAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchStraightAverage({ params, filterParams: commonFilterParams }));
         dispatch(fetchAllSignals());
-        dispatch(fetchSignalsFilterAverage({ params, filterParams: defaultPayload }));
+        dispatch(fetchSignalsFilterAverage({ params, filterParams: commonFilterParams }));
         dispatch(fetchMetricsAverage({ 
           params: { ...params, dashboard: false }, 
-          filterParams: defaultPayload 
+          filterParams: commonFilterParams 
         }));
-        dispatch(fetchMetricsFilter({ params, filterParams: defaultPayload }));
+        dispatch(fetchMetricsFilter({ params, filterParams: commonFilterParams }));
       } catch (error) {
         console.error("Error dispatching Redux actions:", error);
       }
     };
 
     fetchData();
-  }, [selectedMetricKey, dispatch]);
+  }, [selectedMetricKey, filtersApplied]);
+
+  useEffect(() => {
+    if (metricsAverage.data) {
+      const sortedMetricsAvg = metricsAverage.data.map((item: any) => ({
+        label: item.label,
+        avg: item.avg || 0
+      })).sort((a: LocationMetric, b: LocationMetric) => a.avg - b.avg);
+      setLocationMetrics(sortedMetricsAvg as any);
+    }
+  }, [metricsAverage.data]);
+
+  useEffect(() => {
+    // Set time series data when available
+    if (metricsFilter.data) {
+      setTimeSeriesData(metricsFilter.data as any);
+    }
+  }, [metricsFilter.data])
 
   // Process data when Redux state changes
   useEffect(() => {
@@ -186,7 +205,9 @@ export default function Maintenance() {
       // Create a map of signal IDs to metric values
       const metricsMap: { [key: string]: number } = {};
       signalsFilterAverage.data.forEach((item: any) => {
-        metricsMap[item.label] = item.avg;
+        if (item.avg !== 0) { // Only include non-zero values
+          metricsMap[item.label] = item.avg;
+        }
       });
       
       // Prepare map data
@@ -198,42 +219,58 @@ export default function Maintenance() {
           lon: signal.longitude,
           name: `${signal.mainStreetName || ''} ${signal.sideStreetName ? '@ ' + signal.sideStreetName : ''}`,
           value: metricsMap[signal.signalID || ''] || 0
-        }));
+        }))
+        .filter(point => point.value !== 0); // Filter out points with value 0
       setMapData(mapPointsData);
     }
-    
-    // Set location metrics when available
-    if (metricsAverage.data) {
-      setLocationMetrics(metricsAverage.data as any);
-    }
-    
-    // Set time series data when available
-    if (metricsFilter.data) {
-      setTimeSeriesData(metricsFilter.data as any);
-    }
-  }, [signals, signalsFilterAverage.data, metricsAverage.data, metricsFilter.data]);
+  }, [signals, signalsFilterAverage.data, filtersApplied]);
 
   // Handle metric tab change
   const handleMetricChange = (event: React.SyntheticEvent, newValue: string) => {
     setSelectedMetric(newValue);
   }
 
+  // Handle location selection
+  const handleLocationClick = (location: string) => {
+    setSelectedLocation(location === selectedLocation ? null : location);
+  };
+
+  // Create a mapping of locations to colors that will be consistent between charts
+  const getLocationColors = () => {
+    const colors = [
+      '#1f77b4', // blue
+      '#ff7f0e', // orange
+      '#2ca02c', // green
+      '#d62728', // red
+      '#9467bd', // purple
+      '#8c564b', // brown
+      '#e377c2', // pink
+      '#7f7f7f', // gray
+      '#bcbd22', // yellow-green
+      '#17becf'  // cyan
+    ];
+    const uniqueLocations = Array.from(new Set(locationMetrics.map(item => item.label)));
+    return Object.fromEntries(uniqueLocations.map((location, index) => [location, colors[index % colors.length]]));
+  };
+
+  const locationColors = getLocationColors();
+
   // Format the metric value for display
-  const formatMetricValue = (value: number | string, unit?: string) => {
+  const formatMetricValue = (value: number | string | null) => {
     if (typeof value === "number") {
       // Format based on the metric type
       if (selectedMetric === "detectorUptime" || 
           selectedMetric === "pedestrianPushbuttonUptime" || 
           selectedMetric === "cctvUptime" || 
           selectedMetric === "communicationUptime") {
-        return `${value.toFixed(1)}%`
+        return `${(value * 100).toFixed(1)}%`
       } else if (selectedMetric === "pedestrianPushbuttonActivity") {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       } else {
-        return value.toLocaleString()
+        return Math.round(value).toLocaleString()
       }
     }
-    return value
+    return value || "N/A"
   }
 
   // Check if this is a percentage-based metric
@@ -249,7 +286,10 @@ export default function Maintenance() {
     type: "bar",
     orientation: "h",
     marker: {
-      color: "#6c757d",
+      color: locationMetrics.map(item => locationColors[item.label]),
+      opacity: locationMetrics.map(item => 
+        selectedLocation ? (item.label === selectedLocation ? 1 : 0.5) : 1
+      )
     },
     hovertemplate: isPercentMetric
       ? '<b>%{y}</b><br>Value: %{x:.1%}<extra></extra>'
@@ -262,6 +302,11 @@ export default function Maintenance() {
     const locationGroups: { [key: string]: { x: string[]; y: number[] } } = {}
     
     timeSeriesData.forEach((item) => {
+      // If a location is selected, only process data for that location
+      if (selectedLocation && item.corridor !== selectedLocation) {
+        return;
+      }
+
       if (!locationGroups[item.corridor]) {
         locationGroups[item.corridor] = { x: [], y: [] }
       }
@@ -294,7 +339,10 @@ export default function Maintenance() {
       type: "scatter",
       mode: "lines",
       name: location,
-      line: { width: 1, color: "#6c757d" },
+      line: { 
+        width: 2,
+        color: locationColors[location]
+      },
       hovertemplate: isPercentMetric
         ? '<b>%{text}</b><br>Date: %{x}<br>Value: %{y:.1%}<extra></extra>'
         : '<b>%{text}</b><br>Date: %{x}<br>Value: %{y}<extra></extra>',
@@ -491,38 +539,41 @@ export default function Maintenance() {
 
   // Get the title for the time series chart
   const getTimeSeriesTitle = () => {
-    switch (selectedMetric) {
-      case "detectorUptime":
-        return "Detector Uptime"
-      case "pedestrianPushbuttonActivity":
-        return "Daily Pedestrian Pushbutton Activity"
-      case "pedestrianPushbuttonUptime":
-        return "Pedestrian Pushbutton Uptime"
-      case "cctvUptime":
-        return "CCTV Uptime"
-      case "communicationUptime":
-        return "Communication Uptime"
-      default:
-        return "Metric Trend"
-    }
+    return chartTitles[selectedMetric]["bottomChartTitle"]
+
+    // switch (selectedMetric) {
+    //   case "detectorUptime":
+    //     return "Detector Uptime"
+    //   case "pedestrianPushbuttonActivity":
+    //     return "Daily Pedestrian Pushbutton Activity"
+    //   case "pedestrianPushbuttonUptime":
+    //     return "Pedestrian Pushbutton Uptime"
+    //   case "cctvUptime":
+    //     return "CCTV Uptime"
+    //   case "communicationUptime":
+    //     return "Communication Uptime"
+    //   default:
+    //     return "Metric Trend"
+    // }
   }
 
   // Get the subtitle for the metric display
   const getMetricSubtitle = () => {
-    switch (selectedMetric) {
-      case "detectorUptime":
-        return "Vehicle detector uptime"
-      case "pedestrianPushbuttonActivity":
-        return "Average daily pedestrian calls"
-      case "pedestrianPushbuttonUptime":
-        return "Pedestrian pushbutton uptime"
-      case "cctvUptime":
-        return "Surveillance camera uptime"
-      case "communicationUptime":
-        return "Communications system uptime"
-      default:
-        return ""
-    }
+    return chartTitles[selectedMetric]["metricCardTitle"]
+    // switch (selectedMetric) {
+    //   case "detectorUptime":
+    //     return "Vehicle detector uptime"
+    //   case "pedestrianPushbuttonActivity":
+    //     return "Average daily pedestrian calls"
+    //   case "pedestrianPushbuttonUptime":
+    //     return "Pedestrian pushbutton uptime"
+    //   case "cctvUptime":
+    //     return "Surveillance camera uptime"
+    //   case "communicationUptime":
+    //     return "Communications system uptime"
+    //   default:
+    //     return ""
+    // }
   }
 
   return (
@@ -608,6 +659,7 @@ export default function Maintenance() {
                           alignItems: "center",
                         }}
                       >
+                        {metricData.delta < 0 && "-"}
                         {Math.abs(metricData.delta * 100).toFixed(1)}%
                         {metricData.delta > 0 ? (
                           <ArrowUpwardIcon fontSize="small" sx={{ ml: 0.5 }} />
@@ -644,6 +696,18 @@ export default function Maintenance() {
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                       <CircularProgress />
                     </Box>
+                  ) : selectedMetric === "cctvUptime" ? (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      height: '100%',
+                      textAlign: 'center'
+                    }}>
+                      {/* <Typography variant="h6" color="text.secondary">
+                        Map view is not available for CCTV Uptime
+                      </Typography> */}
+                    </Box>
                   ) : (
                     <>
                       <MapBox 
@@ -652,7 +716,7 @@ export default function Maintenance() {
                         loading={false}
                         height="100%"
                         center={{ lat: 33.789, lon: -84.388 }}
-                        zoom={8}
+                        zoom={11}
                         renderLegend={getMapLegend}
                       />
                     </>
@@ -664,69 +728,35 @@ export default function Maintenance() {
             {/* Bottom Charts */}
             <Grid size={{xs: 12}}>
               <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
                   {getTimeSeriesTitle()}
                 </Typography>
                 <Grid container spacing={2}>
                   {/* Location Bar Chart */}
-                  <Grid size={{xs: 12, md: 6}}>
-                    <Plot
-                      data={[locationBarData as any]}
-                      layout={{
-                        autosize: true,
-                        height: 500,
-                        margin: { l: 150, r: 10, t: 10, b: 50 },
-                        yaxis: {
-                          title: "",
-                          automargin: true,
-                          tickfont: { size: 10 },
-                        },
-                        xaxis: {
-                          title:
-                            isPercentMetric
-                              ? "Uptime (%)"
-                              : selectedMetric === "pedestrianPushbuttonActivity"
-                                ? "Pushbutton Activity"
-                                : "Value",
-                          dtick: isPercentMetric ? 0.1 
-                                : selectedMetric === "pedestrianPushbuttonActivity" ? 200 
-                                : undefined,
-                          tickformat: isPercentMetric ? '.1%' : undefined,
-                          range: isPercentMetric ? [0, 1] : undefined,
-                          autorange: !isPercentMetric,
-                        },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
-                    />
+                  <Grid size={{xs: 12, md: 4}}>
+                    <Box sx={{ 
+                      height: "500px", 
+                      display: "flex", 
+                      flexDirection: "column",
+                      overflow: "hidden"
+                    }}>
+                      <LocationBarChart
+                        data={locationBarData as any}
+                        selectedMetric={selectedMetric}
+                        selectedLocation={selectedLocation}
+                        onLocationClick={handleLocationClick}
+                        height={Math.max(500, locationMetrics.length * 10)} // Adjust height based on number of locations
+                      />
+                    </Box>
                   </Grid>
 
                   {/* Time Series Chart */}
-                  <Grid size={{xs: 12, md: 6}}>
-                    <Plot
+                  <Grid size={{xs: 12, md: 8}}>
+                    <TimeSeriesChart
                       data={timeSeriesChartData() as any}
-                      layout={{
-                        autosize: true,
-                        height: 500,
-                        margin: { l: 50, r: 10, t: 10, b: 50 },
-                        xaxis: { title: "Time Period" },
-                        yaxis: {
-                          title:
-                            isPercentMetric
-                              ? "Uptime Trend"
-                              : selectedMetric === "pedestrianPushbuttonActivity"
-                                ? "Activity Trend"
-                                : "Trend",
-                          dtick: isPercentMetric ? 0.1 
-                                : selectedMetric === "pedestrianPushbuttonActivity" ? 200 
-                                : undefined,
-                          tickformat: isPercentMetric ? '.1%' : undefined,
-                          range: isPercentMetric ? [0, 1] : undefined,
-                          autorange: !isPercentMetric,
-                        },
-                        showlegend: false,
-                        legend: { x: 0, y: 1 },
-                      }}
-                      style={{ width: "100%", height: "100%" }}
+                      selectedMetric={selectedMetric}
+                      height={500}
+                      // showLegend={!selectedLocation}
                     />
                   </Grid>
                 </Grid>

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import AppConfig from '../../utils/appConfig';
+import AppConfig from '../../../appConfig';
 
-const BASE_URL = AppConfig.settings.API_PATH;
+axios.defaults.baseURL = AppConfig.API_PATH;
 
 class ApiClient {
     private static instance: ApiClient;
@@ -9,7 +9,6 @@ class ApiClient {
 
     private constructor() {
         this.axiosInstance = axios.create({
-            baseURL: BASE_URL,
             headers: {
                 'Content-Type': 'application/json',
             },

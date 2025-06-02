@@ -376,7 +376,7 @@ const filterSlice = createSlice({
     },
     setFiltersApplied: (state, action: PayloadAction<boolean>) => {
       console.log(`Setting filtersApplied to: ${action.payload}`);
-      state.filtersApplied = action.payload;
+      state.filtersApplied = !state.filtersApplied;
     },
     // Reset all filters to default values
     resetFilters: (state) => {
@@ -405,7 +405,7 @@ const filterSlice = createSlice({
       state.isFiltering = false;
       
       // Reset filtersApplied when filters are reset
-      state.filtersApplied = true;
+      state.filtersApplied = !state.filtersApplied;
     },
     // Save filters as default in local storage
     saveAsDefaults: (state) => {
@@ -436,7 +436,7 @@ const filterSlice = createSlice({
       state.isFiltering = false;
       
       // Set filtersApplied to true to trigger data refresh
-      state.filtersApplied = true;
+      state.filtersApplied = !state.filtersApplied;
     },
     // Load saved filters from local storage
     loadSavedFilters: (state) => {
